@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MC Nexus Hub — Gestão de Patrimônio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#141923;--bg4:#1a2030;--bg5:#202840;
+  --border:#ffffff0a;--border2:#ffffff14;--border3:#ffffff20;
+  --text:#e2e8f4;--text2:#7a88a0;--text3:#3d4a5c;
+  --green:#00e09a;--green2:#00b37a;--green-bg:#00e09a10;--green-border:#00e09a25;
+  --red:#ff4466;--red2:#cc2244;--red-bg:#ff446610;--red-border:#ff446625;
+  --blue:#4da6ff;--blue2:#2288ee;--blue-bg:#4da6ff10;--blue-border:#4da6ff25;
+  --amber:#ffaa33;--amber-bg:#ffaa3310;--amber-border:#ffaa3325;
+  --purple:#b388ff;--purple-bg:#b388ff10;
+  --radius:8px;--radius-lg:12px;--radius-xl:18px;
+  --font:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font)}
+
+/* Layout */
+.layout{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border2);display:flex;flex-direction:column;overflow-y:auto}
+.main{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* Sidebar */
+.sidebar-brand{padding:28px 16px 20px;border-bottom:1px solid var(--border2);margin-bottom:16px}
+.brand-name{font-family:var(--font);font-size:1.3rem;color:var(--amber);font-weight:700;letter-spacing:.06em}
+.brand-sub{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.16em;margin-top:4px}
+.nav-section{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;padding:6px 16px 4px}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;margin:1px 8px;border-radius:var(--radius);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:background .12s,color .12s;border:1px solid transparent}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border2)}
+.sf-label{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.12em}
+.sf-name{color:var(--text2);font-size:.8rem;margin-top:2px}
+
+/* Cards */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.metric-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc-blue::before{background:var(--blue2)}.mc-green::before{background:var(--green2)}.mc-amber::before{background:var(--amber)}.mc-red::before{background:var(--red2)}
+.metric-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+.metric-value{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-1px;line-height:1;color:var(--text)}
+.metric-delta{font-size:11px;font-family:var(--mono);margin-top:6px;color:var(--green)}
+.metric-delta.neg{color:var(--red)}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px}
+.card-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:14px}
+
+/* Divider */
+.divider{border:none;border-top:1px solid var(--border2);margin:20px 0}
+
+/* Section */
+.sec-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:15px;font-weight:700;color:var(--text)}
+.sec-sub{font-size:11px;color:var(--text3);margin-top:2px}
+h3{font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px;letter-spacing:.3px;text-transform:uppercase}
+
+/* Tables */
+.tbl-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border2);background:var(--bg3);white-space:nowrap}
+tbody td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg3)}
+td.r,th.r{text-align:right}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.badge-ativo{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-inativo{background:var(--bg4);color:var(--text3);border:1px solid var(--border2)}
+
+/* Mono helpers */
+.mono{font-family:var(--mono)}
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--text3)}
+
+/* Progress */
+.prog-wrap{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
+.prog-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px}
+.prog-bg{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.prog-fg{height:100%;border-radius:2px;transition:width .5s ease}
+
+/* Ticker tags */
+.ticker-tag{font-family:var(--mono);font-weight:500;color:var(--text);background:var(--bg4);padding:2px 6px;border-radius:5px;border:1px solid var(--border2);font-size:11px}
+.cat-tag{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600}
+.ct-acao{background:#4da6ff18;color:var(--blue)}
+.ct-fii{background:#00e09a18;color:var(--green)}
+.ct-etf{background:#b388ff18;color:var(--purple)}
+.ct-bdr{background:#ffaa3318;color:var(--amber)}
+
+/* Quote card */
+.qcard{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px;margin-bottom:10px}
+.qcard-ticker{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)}
+.qcard-price{font-size:18px;font-weight:700;font-family:var(--mono);line-height:1;margin:4px 0}
+.qcard-chg{font-size:11px;font-family:var(--mono)}
+
+/* Alert row */
+.alert-row{display:flex;gap:10px;padding:12px;background:var(--bg3);border-radius:var(--radius);border-left:3px solid;margin-bottom:8px}
+.al-info{border-color:var(--blue)}.al-warn{border-color:var(--amber)}.al-danger{border-color:var(--red)}.al-ok{border-color:var(--green)}
+.al-body{font-size:12px;color:var(--text2);line-height:1.5}
+.al-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px}
+
+/* Live pill */
+.live-pill{background:var(--green);color:#000;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.8px;animation:blink 2s infinite;display:inline-block}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Page sections */
+.page{display:none}
+.page.active{display:block}
+
+/* Captação bar chart */
+.bar-chart-wrap{display:flex;align-items:flex-end;gap:6px;height:180px;padding-bottom:20px;position:relative}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;height:100%;justify-content:flex-end}
+.bar{width:100%;border-radius:3px 3px 0 0;min-height:4px;transition:opacity .15s;cursor:default}
+.bar:hover{opacity:.8}
+.bar-label{font-size:8px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
+
+/* Responsive */
+@media(max-width:900px){
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .charts-row{grid-template-columns:1fr}
+  .sidebar{width:180px;min-width:180px}
+}
+@media(max-width:600px){
+  .sidebar{display:none}
+  .main{padding:16px}
+  .metric-grid{grid-template-columns:1fr 1fr}
+}
+
+/* Input / btn */
+.btn{background:var(--blue2);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:12px;font-weight:600;padding:7px 16px;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font);font-size:12px;font-weight:600;padding:7px 16px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;font-weight:600;color:var(--text2)}
+.form-input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:7px 10px;font-family:var(--font);font-size:12px}
+.form-input:focus{outline:none;border-color:var(--blue2);box-shadow:0 0 0 3px var(--blue-bg)}
+.form-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;display:none}
+.form-card.open{display:block}
+.actions-row{display:flex;gap:8px;margin-bottom:20px}
+
+/* Tooltip */
+.tooltip{position:relative;display:inline-block}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-name">MC Nexus Hub</div>
+    <div class="brand-sub">Gestão de Patrimônio</div>
+  </div>
+
+  <div class="nav-section">Assessoria</div>
+  <div class="nav-btn active" onclick="goTo('dashboard',this)">◈&nbsp; Dashboard</div>
+  <div class="nav-btn" onclick="goTo('clientes',this)">◉&nbsp; Clientes</div>
+  <div class="nav-btn" onclick="goTo('receitas',this)">◈&nbsp; Receitas</div>
+  <div class="nav-btn" onclick="goTo('captacao',this)">◉&nbsp; Captação</div>
+  <div class="nav-btn" onclick="goTo('metas',this)">◈&nbsp; Metas</div>
+  <div class="nav-btn" onclick="goTo('relatorios',this)">◈&nbsp; Relatórios</div>
+
+  <div class="nav-section" style="padding-top:14px">Renda Variável</div>
+  <div class="nav-btn" onclick="goTo('operacoes',this)">⇄&nbsp; Operações</div>
+  <div class="nav-btn" onclick="goTo('posicoes',this)">▦&nbsp; Posições</div>
+  <div class="nav-btn" onclick="goTo('cotacoes',this)">◉&nbsp; Cotações</div>
+  <div class="nav-btn" onclick="goTo('alertas',this)">◎&nbsp; Alertas</div>
+
+  <div class="sidebar-footer">
+    <div class="sf-label">Assessor</div>
+    <div class="sf-name">MC Assessoria</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<section id="page-dashboard" class="page active">
+  <div class="sec-head">
+    <div><div class="sec-title">Dashboard</div><div class="sec-sub">Visão geral do escritório</div></div>
+    <span class="live-pill">LIVE</span>
+  </div>
+  <hr class="divider"/>
+
+  <div class="metric-grid">
+    <div class="metric-card mc-blue">
+      <div class="metric-label">Clientes Ativos</div>
+      <div class="metric-value" id="d-ativos">6</div>
+      <div class="metric-delta">▲ 2 este mês</div>
+    </div>
+    <div class="metric-card mc-green">
+      <div class="metric-label">AUM Total</div>
+      <div class="metric-value" id="d-aum">R$ 10.235.000</div>
+      <div class="metric-delta">▲ 4,2%</div>
+    </div>
+    <div class="metric-card mc-amber">
+      <div class="metric-label">Receita Líquida</div>
+      <div class="metric-value" id="d-receita">—</div>
+      <div class="metric-delta">▲ 8,1%</div>
+    </div>
+    <div class="metric-card mc-red">
+      <div class="metric-label">Meta Receita</div>
+      <div class="metric-value" id="d-meta-pct">74%</div>
+      <div class="metric-delta" id="d-meta-sub">R$ 36.800 / R$ 50.000</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="card-title">Captação Mensal (R$ mil)</div>
+      <canvas id="chartCaptacao" height="160"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Distribuição AUM</div>
+      <canvas id="chartAum" height="160"></canvas>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+  <h3>Últimas Receitas Lançadas</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Cliente</th><th>Produto</th><th>Valor Aplic.</th>
+        <th class="r">ROA</th><th class="r">Repasse</th><th class="r">Rec. Líquida</th><th>Data</th>
+      </tr></thead>
+      <tbody id="d-receitas-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ CLIENTES ══════════════ -->
+<section id="page-clientes" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Clientes</div><div class="sec-sub">Carteira de clientes da assessoria</div></div>
+    <button class="btn" onclick="toggleForm('form-cliente')">+ Novo Cliente</button>
+  </div>
+  <hr class="divider"/>
+
+  <div class="form-card" id="form-cliente">
+    <h3 style="margin-bottom:16px">Novo Cliente</h3>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Nome completo</label><input class="form-input" id="fc-nome" placeholder="Nome"/></div>
+      <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="fc-email" type="email" placeholder="email@exemplo.com"/></div>
+      <div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="fc-tel" placeholder="(11) 99999-9999"/></div>
+      <div class="form-group"><label class="form-label">Patrimônio (R$)</label><input class="form-input" id="fc-pat" type="number" placeholder="500000"/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="addCliente()">Salvar</button>
+      <button class="btn-ghost" onclick="toggleForm('form-cliente')">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Nome</th><th>E-mail</th><th>Telefone</th><th class="r">Patrimônio</th><th>Status</th><th>Cadastro</th></tr></thead>
+      <tbody id="cli-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ RECEITAS ══════════════ -->
+<section id="page-receitas" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Receitas</div><div class="sec-sub">Registro de receitas por cliente</div></div>
+    <button class="btn" onclick="toggleForm('form-receita')">+ Nova Receita</button>
+  </div>
+  <hr class="divider"/>
+
+  <div class="form-card" id="form-receita">
+    <h3 style="margin-bottom:16px">Nova Receita</h3>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Cliente</label><input class="form-input" id="fr-cliente" placeholder="Nome do cliente"/></div>
+      <div class="form-group"><label class="form-label">Produto</label>
+        <select class="form-input" id="fr-produto">
+          <option>Renda Fixa</option><option>Multimercado</option><option>Renda Variável</option><option>Previdência</option><option>FII</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Valor Aplicação (R$)</label><input class="form-input" id="fr-valor" type="number" placeholder="500000"/></div>
+      <div class="form-group"><label class="form-label">ROA (% a.a.)</label><input class="form-input" id="fr-roa" type="number" step="0.1" placeholder="1.5"/></div>
+      <div class="form-group"><label class="form-label">Repasse (%)</label><input class="form-input" id="fr-repasse" type="number" step="1" placeholder="35"/></div>
+      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="fr-data" type="date"/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="addReceita()">Salvar</button>
+      <button class="btn-ghost" onclick="toggleForm('form-receita')">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="metric-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:20px">
+    <div class="metric-card mc-green"><div class="metric-label">Receita Bruta Total</div><div class="metric-value" id="r-bruta">—</div></div>
+    <div class="metric-card mc-amber"><div class="metric-label">Receita Líquida Total</div><div class="metric-value" id="r-liquida">—</div></div>
+    <div class="metric-card mc-blue"><div class="metric-label">Lançamentos</div><div class="metric-value" id="r-count">—</div></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Cliente</th><th>Produto</th><th class="r">Valor Aplic.</th><th class="r">ROA</th><th class="r">Repasse</th><th class="r">Rec. Bruta</th><th class="r">IR</th><th class="r">Rec. Líquida</th><th>Data</th></tr></thead>
+      <tbody id="rec-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ CAPTAÇÃO ══════════════ -->
+<section id="page-captacao" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Captação</div><div class="sec-sub">Histórico de captação mensal</div></div>
+  </div>
+  <hr class="divider"/>
+  <div class="metric-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:20px">
+    <div class="metric-card mc-green"><div class="metric-label">Total Anual</div><div class="metric-value" id="cap-total">—</div></div>
+    <div class="metric-card mc-blue"><div class="metric-label">Melhor Mês</div><div class="metric-value" id="cap-melhor">—</div></div>
+    <div class="metric-card mc-amber"><div class="metric-label">Média Mensal</div><div class="metric-value" id="cap-media">—</div></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:20px">
+    <div class="card-title">Captação por Mês</div>
+    <canvas id="chartCaptacaoFull" height="200"></canvas>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Mês</th><th class="r">Captação (R$)</th><th class="r">vs. Anterior</th></tr></thead>
+      <tbody id="cap-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ METAS ══════════════ -->
+<section id="page-metas" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Metas</div><div class="sec-sub">Acompanhamento de metas do escritório</div></div>
+  </div>
+  <hr class="divider"/>
+  <div id="metas-list"></div>
+</section>
+
+<!-- ══════════════ RELATÓRIOS ══════════════ -->
+<section id="page-relatorios" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Relatórios</div><div class="sec-sub">Resumo consolidado</div></div>
+  </div>
+  <hr class="divider"/>
+  <div class="metric-grid" style="margin-bottom:20px">
+    <div class="metric-card mc-blue"><div class="metric-label">Total Clientes</div><div class="metric-value" id="rel-total-cli">8</div></div>
+    <div class="metric-card mc-green"><div class="metric-label">Clientes Ativos</div><div class="metric-value" id="rel-ativos">6</div></div>
+    <div class="metric-card mc-amber"><div class="metric-label">AUM Total</div><div class="metric-value" id="rel-aum">—</div></div>
+    <div class="metric-card mc-red"><div class="metric-label">Receita Líquida</div><div class="metric-value" id="rel-liq">—</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card"><div class="card-title">Patrimônio por Cliente</div><canvas id="chartRelPat" height="200"></canvas></div>
+    <div class="chart-card"><div class="card-title">Status dos Clientes</div><canvas id="chartRelStatus" height="200"></canvas></div>
+  </div>
+</section>
+
+<!-- ══════════════ OPERAÇÕES ══════════════ -->
+<section id="page-operacoes" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Operações</div><div class="sec-sub">Registro de operações de Renda Variável</div></div>
+    <button class="btn" onclick="toggleForm('form-operacao')">+ Nova Operação</button>
+  </div>
+  <hr class="divider"/>
+
+  <div class="form-card" id="form-operacao">
+    <h3 style="margin-bottom:16px">Nova Operação</h3>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Cliente</label>
+        <select class="form-input" id="fo-cliente"></select>
+      </div>
+      <div class="form-group"><label class="form-label">Tipo</label>
+        <select class="form-input" id="fo-tipo"><option>Compra</option><option>Venda</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Ticker</label><input class="form-input" id="fo-ticker" placeholder="PETR4" style="text-transform:uppercase"/></div>
+      <div class="form-group"><label class="form-label">Categoria</label>
+        <select class="form-input" id="fo-cat"><option>Ação</option><option>FII</option><option>ETF</option><option>BDR</option><option>Opção</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" id="fo-qty" type="number" placeholder="100"/></div>
+      <div class="form-group"><label class="form-label">Preço (R$)</label><input class="form-input" id="fo-preco" type="number" step="0.01" placeholder="34.50"/></div>
+      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="fo-data" type="date"/></div>
+      <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="fo-obs" placeholder="Opcional"/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="addOperacao()">Salvar</button>
+      <button class="btn-ghost" onclick="toggleForm('form-operacao')">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Cliente</th><th>Tipo</th><th>Ticker</th><th>Cat.</th><th class="r">Qtd</th><th class="r">Preço</th><th class="r">Total</th><th>Data</th><th>Obs.</th></tr></thead>
+      <tbody id="op-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ POSIÇÕES ══════════════ -->
+<section id="page-posicoes" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Posições</div><div class="sec-sub">Carteira de Renda Variável</div></div>
+    <div>
+      <select class="form-input" id="pos-filter" onchange="renderPosicoes()" style="width:auto">
+        <option value="">Todos os Clientes</option>
+      </select>
+    </div>
+  </div>
+  <hr class="divider"/>
+
+  <div class="metric-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:20px">
+    <div class="metric-card mc-blue"><div class="metric-label">Posições Abertas</div><div class="metric-value" id="pos-count">—</div></div>
+    <div class="metric-card mc-green"><div class="metric-label">P&L Não Realizado</div><div class="metric-value" id="pos-unreal">—</div></div>
+    <div class="metric-card mc-amber"><div class="metric-label">P&L Realizado</div><div class="metric-value" id="pos-real">—</div></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Ticker</th><th>Cat.</th><th class="r">Qtd</th><th class="r">PM (R$)</th><th class="r">Cotação</th><th class="r">P&L N.R.</th><th class="r">P&L %</th><th class="r">Custo Total</th></tr></thead>
+      <tbody id="pos-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════ COTAÇÕES ══════════════ -->
+<section id="page-cotacoes" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Cotações</div><div class="sec-sub">Preços em tempo real via Brapi (B3)</div></div>
+    <button class="btn" onclick="refreshCotacoes()">↻ Atualizar</button>
+  </div>
+  <hr class="divider"/>
+  <div id="cotacoes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px"></div>
+</section>
+
+<!-- ══════════════ ALERTAS ══════════════ -->
+<section id="page-alertas" class="page">
+  <div class="sec-head">
+    <div><div class="sec-title">Alertas</div><div class="sec-sub">Notificações e alertas do sistema</div></div>
+    <button class="btn" onclick="toggleForm('form-alerta')">+ Novo Alerta</button>
+  </div>
+  <hr class="divider"/>
+
+  <div class="form-card" id="form-alerta">
+    <h3 style="margin-bottom:16px">Novo Alerta</h3>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Tipo</label>
+        <select class="form-input" id="fa-tipo"><option value="info">Info</option><option value="warn">Aviso</option><option value="danger">Alerta</option><option value="ok">OK</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Título</label><input class="form-input" id="fa-titulo" placeholder="Título do alerta"/></div>
+      <div class="form-group" style="grid-column:1/-1"><label class="form-label">Mensagem</label><input class="form-input" id="fa-msg" placeholder="Descrição do alerta"/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="addAlerta()">Salvar</button>
+      <button class="btn-ghost" onclick="toggleForm('form-alerta')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="alertas-list">
+    <div class="alert-row al-info"><div class="al-body"><div class="al-title">Sistema Online</div>MC Nexus Hub iniciado com sucesso.</div></div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ─── Data ────────────────────────────────────────────────────────────────────
+const BRAPI_TOKEN = '2jou51P6VahKzY5uHZMyW7';
+const IR_FIXO = 0.195;
+
+const clientes = [
+  {id:1,nome:'Ana Beatriz Souza',email:'ana@email.com',telefone:'(11) 99001-2345',patrimonio:850000,status:'Ativo',data_cadastro:'2023-03-15'},
+  {id:2,nome:'Carlos Mendes',email:'carlos@email.com',telefone:'(21) 98765-4321',patrimonio:2300000,status:'Ativo',data_cadastro:'2022-07-22'},
+  {id:3,nome:'Fernanda Lima',email:'fe@email.com',telefone:'(31) 97654-3210',patrimonio:410000,status:'Inativo',data_cadastro:'2023-11-01'},
+  {id:4,nome:'Roberto Alves',email:'rob@email.com',telefone:'(41) 96543-2109',patrimonio:1750000,status:'Ativo',data_cadastro:'2021-05-18'},
+  {id:5,nome:'Patrícia Gomes',email:'pat@email.com',telefone:'(51) 95432-1098',patrimonio:630000,status:'Ativo',data_cadastro:'2024-01-10'},
+  {id:6,nome:'Marcelo Ferreira',email:'mf@email.com',telefone:'(61) 94321-0987',patrimonio:3100000,status:'Ativo',data_cadastro:'2020-09-05'},
+  {id:7,nome:'Juliana Costa',email:'ju@email.com',telefone:'(71) 93210-9876',patrimonio:920000,status:'Ativo',data_cadastro:'2023-06-28'},
+  {id:8,nome:'Eduardo Nunes',email:'edu@email.com',telefone:'(81) 92109-8765',patrimonio:275000,status:'Inativo',data_cadastro:'2024-02-14'},
+];
+
+const receitas = [
+  {id:1,cliente:'Carlos Mendes',produto:'Renda Fixa',valor_aplicacao:500000,roa:1.2,repasse:0.35,data:'2024-03-01'},
+  {id:2,cliente:'Roberto Alves',produto:'Multimercado',valor_aplicacao:800000,roa:1.8,repasse:0.40,data:'2024-03-05'},
+  {id:3,cliente:'Ana Beatriz',produto:'Renda Variável',valor_aplicacao:300000,roa:2.5,repasse:0.45,data:'2024-03-12'},
+  {id:4,cliente:'Marcelo Ferreira',produto:'Previdência',valor_aplicacao:1000000,roa:0.9,repasse:0.30,data:'2024-03-18'},
+  {id:5,cliente:'Patrícia Gomes',produto:'Renda Fixa',valor_aplicacao:200000,roa:1.1,repasse:0.35,data:'2024-03-22'},
+  {id:6,cliente:'Juliana Costa',produto:'FII',valor_aplicacao:450000,roa:1.5,repasse:0.40,data:'2024-03-28'},
+];
+
+const captacoes = [
+  {mes:'Jan',valor:320000},{mes:'Fev',valor:480000},{mes:'Mar',valor:560000},
+  {mes:'Abr',valor:390000},{mes:'Mai',valor:620000},{mes:'Jun',valor:700000},
+  {mes:'Jul',valor:510000},{mes:'Ago',valor:680000},{mes:'Set',valor:730000},
+  {mes:'Out',valor:590000},{mes:'Nov',valor:810000},{mes:'Dez',valor:950000},
+];
+
+const metas = {
+  receita_bruta:  {label:'Receita Bruta',meta:50000,  realizado:36800, cor:'#4da6ff'},
+  novos_clientes: {label:'Novos Clientes',meta:10,    realizado:7,     cor:'#00e09a'},
+  captacao:       {label:'Captação',      meta:5000000,realizado:3750000,cor:'#ffaa33'},
+  aum:            {label:'AUM',           meta:20000000,realizado:15200000,cor:'#b388ff'},
+};
+
+let operacoes = [
+  {id:1,client_id:1,tipo:'Compra',ticker:'PETR4',cat:'Ação',qty:100,price:34.50,date:'2024-01-15',obs:''},
+  {id:2,client_id:1,tipo:'Compra',ticker:'VALE3',cat:'Ação',qty:50, price:67.20,date:'2024-01-22',obs:''},
+  {id:3,client_id:2,tipo:'Compra',ticker:'HGLG11',cat:'FII',qty:30, price:163.00,date:'2024-02-05',obs:''},
+  {id:4,client_id:2,tipo:'Compra',ticker:'PETR4',cat:'Ação',qty:200,price:36.80,date:'2024-02-10',obs:''},
+  {id:5,client_id:1,tipo:'Venda', ticker:'PETR4',cat:'Ação',qty:50, price:38.20,date:'2024-03-01',obs:'Parcial'},
+  {id:6,client_id:4,tipo:'Compra',ticker:'BOVA11',cat:'ETF',qty:80, price:118.50,date:'2024-02-20',obs:''},
+  {id:7,client_id:4,tipo:'Compra',ticker:'ITUB4',cat:'Ação',qty:150,price:32.10,date:'2024-03-05',obs:''},
+  {id:8,client_id:6,tipo:'Compra',ticker:'BBAS3',cat:'Ação',qty:300,price:53.40,date:'2024-01-30',obs:''},
+  {id:9,client_id:6,tipo:'Compra',ticker:'XPML11',cat:'FII',qty:100,price:101.20,date:'2024-02-15',obs:''},
+];
+
+let alertas = [];
+let quoteCache = {};
+let chartCaptacao, chartAum, chartCaptacaoFull, chartRelPat, chartRelStatus;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function brl(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function brlk(v){return'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:0})+'k'}
+function pct(v,dec=1){return v.toFixed(dec)+'%'}
+function calcReceita(valor,roa,repasse){
+  const bruta=valor*roa/100;
+  const rep=bruta*repasse;
+  const ir=rep*IR_FIXO;
+  return{bruta,rep,ir,liq:rep-ir};
+}
+function catClass(c){return({Ação:'ct-acao',FII:'ct-fii',ETF:'ct-etf',BDR:'ct-bdr',Opção:'ct-opcao'}[c]||'ct-acao')}
+function nomeCliente(id){const c=clientes.find(x=>x.id==id);return c?c.nome:'—'}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function goTo(page, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderPage(page);
+}
+
+function renderPage(page){
+  const fns={
+    dashboard: renderDashboard,
+    clientes: renderClientes,
+    receitas: renderReceitas,
+    captacao: renderCaptacao,
+    metas: renderMetas,
+    relatorios: renderRelatorios,
+    operacoes: renderOperacoes,
+    posicoes: renderPosicoes,
+    cotacoes: renderCotacoes,
+    alertas: renderAlertas,
+  };
+  if(fns[page]) fns[page]();
+}
+
+function toggleForm(id){
+  const el=document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const ativos=clientes.filter(c=>c.status==='Ativo').length;
+  const aum=clientes.reduce((s,c)=>s+c.patrimonio,0);
+  let totLiq=0;
+  receitas.forEach(r=>{const c=calcReceita(r.valor_aplicacao,r.roa,r.repasse);totLiq+=c.liq});
+
+  document.getElementById('d-ativos').textContent=ativos;
+  document.getElementById('d-aum').textContent=brl(aum);
+  document.getElementById('d-receita').textContent=brl(totLiq);
+
+  const meta=metas.receita_bruta;
+  document.getElementById('d-meta-pct').textContent=Math.round(meta.realizado/meta.meta*100)+'%';
+  document.getElementById('d-meta-sub').textContent=brl(meta.realizado)+' / '+brl(meta.meta);
+
+  // Chart captação
+  const ctx=document.getElementById('chartCaptacao').getContext('2d');
+  if(chartCaptacao) chartCaptacao.destroy();
+  chartCaptacao=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:captacoes.map(c=>c.mes),
+      datasets:[{
+        data:captacoes.map(c=>c.valor/1000),
+        backgroundColor:captacoes.map((_,i)=>i>=9?'#C9A84C':'#2A2A3A'),
+        borderRadius:3,
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'R$ '+ctx.raw.toFixed(0)+'k'}}},
+      scales:{
+        x:{grid:{color:'#1a1a2e'},ticks:{color:'#555',font:{size:10}}},
+        y:{grid:{color:'#1a1a2e'},ticks:{color:'#555',font:{size:10},callback:v=>v+'k'}},
+      },
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+
+  // Chart AUM donut
+  const ctx2=document.getElementById('chartAum').getContext('2d');
+  if(chartAum) chartAum.destroy();
+  chartAum=new Chart(ctx2,{
+    type:'doughnut',
+    data:{
+      labels:['Renda Fixa','Multimercado','R. Variável','Prev.','FII'],
+      datasets:[{data:[40,25,18,10,7],backgroundColor:['#C9A84C','#A8863A','#8A6D30','#6B5326','#4D3A1C'],borderColor:'#0D0D0D',borderWidth:2}]
+    },
+    options:{
+      cutout:'60%',
+      plugins:{legend:{position:'right',labels:{color:'#7a88a0',font:{size:10},padding:8}}},
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+
+  // Recent receitas
+  const tbody=document.getElementById('d-receitas-tbody');
+  tbody.innerHTML='';
+  [...receitas].reverse().slice(0,5).forEach(r=>{
+    const c=calcReceita(r.valor_aplicacao,r.roa,r.repasse);
+    tbody.innerHTML+=`<tr>
+      <td>${r.cliente}</td><td>${r.produto}</td>
+      <td class="r mono">${brl(r.valor_aplicacao)}</td>
+      <td class="r mono">${r.roa}%</td>
+      <td class="r mono">${(r.repasse*100).toFixed(0)}%</td>
+      <td class="r mono pos">${brl(c.liq)}</td>
+      <td>${r.data}</td>
+    </tr>`;
+  });
+}
+
+// ─── Clientes ─────────────────────────────────────────────────────────────────
+function renderClientes(){
+  const tbody=document.getElementById('cli-tbody');
+  tbody.innerHTML='';
+  clientes.forEach(c=>{
+    tbody.innerHTML+=`<tr>
+      <td class="mono neu">${c.id}</td>
+      <td>${c.nome}</td>
+      <td class="neu">${c.email}</td>
+      <td class="neu">${c.telefone}</td>
+      <td class="r mono">${brl(c.patrimonio)}</td>
+      <td><span class="badge badge-${c.status.toLowerCase()}">${c.status}</span></td>
+      <td class="neu">${c.data_cadastro}</td>
+    </tr>`;
+  });
+}
+
+function addCliente(){
+  const nome=document.getElementById('fc-nome').value.trim();
+  const email=document.getElementById('fc-email').value.trim();
+  const tel=document.getElementById('fc-tel').value.trim();
+  const pat=parseFloat(document.getElementById('fc-pat').value)||0;
+  if(!nome){alert('Informe o nome');return}
+  const newId=Math.max(...clientes.map(c=>c.id),0)+1;
+  clientes.push({id:newId,nome,email,telefone:tel,patrimonio:pat,status:'Ativo',data_cadastro:new Date().toISOString().slice(0,10)});
+  toggleForm('form-cliente');
+  ['fc-nome','fc-email','fc-tel','fc-pat'].forEach(id=>document.getElementById(id).value='');
+  renderClientes();
+}
+
+// ─── Receitas ─────────────────────────────────────────────────────────────────
+function renderReceitas(){
+  let totBruta=0,totLiq=0;
+  const tbody=document.getElementById('rec-tbody');
+  tbody.innerHTML='';
+  receitas.forEach(r=>{
+    const c=calcReceita(r.valor_aplicacao,r.roa,r.repasse);
+    totBruta+=c.bruta; totLiq+=c.liq;
+    tbody.innerHTML+=`<tr>
+      <td>${r.cliente}</td><td>${r.produto}</td>
+      <td class="r mono">${brl(r.valor_aplicacao)}</td>
+      <td class="r mono">${r.roa}%</td>
+      <td class="r mono">${(r.repasse*100).toFixed(0)}%</td>
+      <td class="r mono">${brl(c.bruta)}</td>
+      <td class="r mono neg">${brl(c.ir)}</td>
+      <td class="r mono pos">${brl(c.liq)}</td>
+      <td>${r.data}</td>
+    </tr>`;
+  });
+  document.getElementById('r-bruta').textContent=brl(totBruta);
+  document.getElementById('r-liquida').textContent=brl(totLiq);
+  document.getElementById('r-count').textContent=receitas.length;
+}
+
+function addReceita(){
+  const cliente=document.getElementById('fr-cliente').value.trim();
+  const produto=document.getElementById('fr-produto').value;
+  const valor=parseFloat(document.getElementById('fr-valor').value)||0;
+  const roa=parseFloat(document.getElementById('fr-roa').value)||0;
+  const repasse=parseFloat(document.getElementById('fr-repasse').value)/100||0;
+  const data=document.getElementById('fr-data').value||new Date().toISOString().slice(0,10);
+  if(!cliente||!valor){alert('Preencha cliente e valor');return}
+  receitas.push({id:receitas.length+1,cliente,produto,valor_aplicacao:valor,roa,repasse,data});
+  toggleForm('form-receita');
+  renderReceitas();
+}
+
+// ─── Captação ─────────────────────────────────────────────────────────────────
+function renderCaptacao(){
+  const total=captacoes.reduce((s,c)=>s+c.valor,0);
+  const melhor=captacoes.reduce((m,c)=>c.valor>m.valor?c:m);
+  const media=total/captacoes.length;
+  document.getElementById('cap-total').textContent=brl(total);
+  document.getElementById('cap-melhor').textContent=melhor.mes+' — '+brlk(melhor.valor);
+  document.getElementById('cap-media').textContent=brlk(media);
+
+  const ctx=document.getElementById('chartCaptacaoFull').getContext('2d');
+  if(chartCaptacaoFull) chartCaptacaoFull.destroy();
+  chartCaptacaoFull=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:captacoes.map(c=>c.mes),
+      datasets:[{
+        data:captacoes.map(c=>c.valor/1000),
+        backgroundColor:captacoes.map(c=>c.mes===melhor.mes?'#C9A84C':'#2A2A3A'),
+        borderRadius:3,
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'R$ '+ctx.raw.toFixed(0)+'k'}}},
+      scales:{
+        x:{grid:{color:'#1a1a2e'},ticks:{color:'#555',font:{size:10}}},
+        y:{grid:{color:'#1a1a2e'},ticks:{color:'#555',font:{size:10},callback:v=>v+'k'}},
+      },
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+
+  const tbody=document.getElementById('cap-tbody');
+  tbody.innerHTML='';
+  captacoes.forEach((c,i)=>{
+    const prev=i>0?captacoes[i-1].valor:null;
+    const delta=prev!=null?((c.valor-prev)/prev*100):null;
+    const deltaHtml=delta!=null?`<span class="${delta>=0?'pos':'neg'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(1)}%</span>`:'—';
+    tbody.innerHTML+=`<tr><td>${c.mes}</td><td class="r mono">${brl(c.valor)}</td><td class="r">${deltaHtml}</td></tr>`;
+  });
+}
+
+// ─── Metas ────────────────────────────────────────────────────────────────────
+function renderMetas(){
+  const el=document.getElementById('metas-list');
+  el.innerHTML='';
+  Object.entries(metas).forEach(([k,m])=>{
+    const pct=Math.min(m.realizado/m.meta*100,100);
+    const fmt=k==='novos_clientes'?v=>v:brl;
+    el.innerHTML+=`<div class="prog-wrap">
+      <div class="prog-row">
+        <span>${m.label}</span>
+        <span class="mono">${fmt(m.realizado)} / ${fmt(m.meta)} — <strong style="color:${m.cor}">${pct.toFixed(0)}%</strong></span>
+      </div>
+      <div class="prog-bg"><div class="prog-fg" style="width:${pct}%;background:${m.cor}"></div></div>
+    </div>`;
+  });
+}
+
+// ─── Relatórios ───────────────────────────────────────────────────────────────
+function renderRelatorios(){
+  const aum=clientes.reduce((s,c)=>s+c.patrimonio,0);
+  let totLiq=0;
+  receitas.forEach(r=>{const c=calcReceita(r.valor_aplicacao,r.roa,r.repasse);totLiq+=c.liq});
+  const ativos=clientes.filter(c=>c.status==='Ativo').length;
+  document.getElementById('rel-total-cli').textContent=clientes.length;
+  document.getElementById('rel-ativos').textContent=ativos;
+  document.getElementById('rel-aum').textContent=brl(aum);
+  document.getElementById('rel-liq').textContent=brl(totLiq);
+
+  const ctx1=document.getElementById('chartRelPat').getContext('2d');
+  if(chartRelPat) chartRelPat.destroy();
+  chartRelPat=new Chart(ctx1,{
+    type:'bar',
+    data:{
+      labels:clientes.map(c=>c.nome.split(' ')[0]),
+      datasets:[{data:clientes.map(c=>c.patrimonio/1000),backgroundColor:'#2288ee',borderRadius:3}]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'R$ '+ctx.raw.toFixed(0)+'k'}}},
+      scales:{
+        x:{grid:{color:'#1a1a2e'},ticks:{color:'#555',font:{size:10},callback:v=>v+'k'}},
+        y:{grid:{color:'transparent'},ticks:{color:'#7a88a0',font:{size:10}}},
+      },
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+
+  const ctx2=document.getElementById('chartRelStatus').getContext('2d');
+  if(chartRelStatus) chartRelStatus.destroy();
+  chartRelStatus=new Chart(ctx2,{
+    type:'doughnut',
+    data:{
+      labels:['Ativo','Inativo'],
+      datasets:[{data:[ativos,clientes.length-ativos],backgroundColor:['#00e09a','#2A2A3A'],borderColor:'#0D0D0D',borderWidth:2}]
+    },
+    options:{
+      cutout:'55%',
+      plugins:{legend:{position:'bottom',labels:{color:'#7a88a0',font:{size:11},padding:12}}},
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+}
+
+// ─── Operações ────────────────────────────────────────────────────────────────
+function renderOperacoes(){
+  // populate client select
+  const sel=document.getElementById('fo-cliente');
+  if(sel.options.length<=1){
+    clientes.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id; o.textContent=c.nome;
+      sel.appendChild(o);
+    });
+  }
+
+  const tbody=document.getElementById('op-tbody');
+  tbody.innerHTML='';
+  [...operacoes].reverse().forEach(o=>{
+    const total=o.qty*o.price;
+    const tipoHtml=o.tipo==='Compra'?`<span class="pos">▲ Compra</span>`:`<span class="neg">▼ Venda</span>`;
+    tbody.innerHTML+=`<tr>
+      <td class="mono neu">${o.id}</td>
+      <td>${nomeCliente(o.client_id)}</td>
+      <td>${tipoHtml}</td>
+      <td><span class="ticker-tag">${o.ticker}</span></td>
+      <td><span class="cat-tag ${catClass(o.cat)}">${o.cat}</span></td>
+      <td class="r mono">${o.qty.toLocaleString('pt-BR')}</td>
+      <td class="r mono">${brl(o.price)}</td>
+      <td class="r mono">${brl(total)}</td>
+      <td class="neu">${o.date}</td>
+      <td class="neu">${o.obs||'—'}</td>
+    </tr>`;
+  });
+}
+
+function addOperacao(){
+  const client_id=parseInt(document.getElementById('fo-cliente').value)||1;
+  const tipo=document.getElementById('fo-tipo').value;
+  const ticker=document.getElementById('fo-ticker').value.toUpperCase().trim();
+  const cat=document.getElementById('fo-cat').value;
+  const qty=parseFloat(document.getElementById('fo-qty').value)||0;
+  const price=parseFloat(document.getElementById('fo-preco').value)||0;
+  const date=document.getElementById('fo-data').value||new Date().toISOString().slice(0,10);
+  const obs=document.getElementById('fo-obs').value;
+  if(!ticker||!qty||!price){alert('Preencha ticker, quantidade e preço');return}
+  operacoes.push({id:operacoes.length+1,client_id,tipo,ticker,cat,qty,price,date,obs});
+  toggleForm('form-operacao');
+  renderOperacoes();
+}
+
+// ─── Posições ─────────────────────────────────────────────────────────────────
+function buildPositions(ops,clientId=null){
+  if(clientId) ops=ops.filter(o=>o.client_id==clientId);
+  const map={};
+  ops.forEach(o=>{
+    const k=`${o.client_id}_${o.ticker}`;
+    if(!map[k]) map[k]={client_id:o.client_id,ticker:o.ticker,cat:o.cat,qty:0,total_cost:0,realized_pl:0};
+    const p=map[k];
+    if(o.tipo==='Compra'){p.qty+=o.qty;p.total_cost+=o.qty*o.price}
+    else{const pm=p.qty>0?p.total_cost/p.qty:0;p.realized_pl+=(o.price-pm)*o.qty;p.qty-=o.qty;p.total_cost-=pm*o.qty}
+  });
+  return Object.values(map).filter(p=>p.qty>0.001);
+}
+
+function renderPosicoes(){
+  // populate filter
+  const sel=document.getElementById('pos-filter');
+  if(sel.options.length<=1){
+    clientes.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id; o.textContent=c.nome;
+      sel.appendChild(o);
+    });
+  }
+  const filterVal=sel.value?parseInt(sel.value):null;
+  const positions=buildPositions(operacoes,filterVal);
+  let totUnreal=0,totReal=0;
+  const tbody=document.getElementById('pos-tbody');
+  tbody.innerHTML='';
+  positions.forEach(p=>{
+    const pm=p.qty>0?p.total_cost/p.qty:0;
+    const q=quoteCache[p.ticker];
+    const current=q?q.price:pm;
+    const unreal=(current-pm)*p.qty;
+    totUnreal+=unreal; totReal+=p.realized_pl;
+    const unrealPct=pm>0?(current-pm)/pm*100:0;
+    const cotHtml=q?`<span class="mono ${q.change_pct>=0?'pos':'neg'}">${brl(q.price)}</span>`:`<span class="mono neu">—</span>`;
+    tbody.innerHTML+=`<tr>
+      <td><span class="ticker-tag">${p.ticker}</span></td>
+      <td><span class="cat-tag ${catClass(p.cat)}">${p.cat}</span></td>
+      <td class="r mono">${p.qty.toLocaleString('pt-BR')}</td>
+      <td class="r mono">${brl(pm)}</td>
+      <td class="r">${cotHtml}</td>
+      <td class="r mono ${unreal>=0?'pos':'neg'}">${brl(unreal)}</td>
+      <td class="r mono ${unrealPct>=0?'pos':'neg'}">${unrealPct.toFixed(2)}%</td>
+      <td class="r mono">${brl(p.total_cost)}</td>
+    </tr>`;
+  });
+  document.getElementById('pos-count').textContent=positions.length;
+  document.getElementById('pos-unreal').innerHTML=`<span class="${totUnreal>=0?'pos':'neg'}">${brl(totUnreal)}</span>`;
+  document.getElementById('pos-real').textContent=brl(totReal);
+}
+
+// ─── Cotações ─────────────────────────────────────────────────────────────────
+async function refreshCotacoes(){
+  const tickers=[...new Set(operacoes.map(o=>o.ticker))];
+  const grid=document.getElementById('cotacoes-grid');
+  grid.innerHTML='<div style="color:var(--text3);font-size:12px">Buscando cotações…</div>';
+  try{
+    const res=await fetch(`https://brapi.dev/api/quote/${tickers.join(',')}?token=${BRAPI_TOKEN}&fundamental=false`);
+    if(!res.ok) throw new Error('Erro '+res.status);
+    const data=await res.json();
+    grid.innerHTML='';
+    (data.results||[]).forEach(item=>{
+      if(!item.regularMarketPrice) return;
+      quoteCache[item.symbol]={price:item.regularMarketPrice,change_pct:item.regularMarketChangePercent||0};
+      const chg=item.regularMarketChangePercent||0;
+      const cls=chg>=0?'pos':'neg';
+      const arrow=chg>=0?'▲':'▼';
+      grid.innerHTML+=`<div class="qcard">
+        <div class="qcard-ticker">${item.symbol} <span class="cat-tag ${catClass(operacoes.find(o=>o.ticker===item.symbol)?.cat||'Ação')}">${operacoes.find(o=>o.ticker===item.symbol)?.cat||'Ação'}</span></div>
+        <div class="qcard-price ${cls}">${brl(item.regularMarketPrice)}</div>
+        <div class="qcard-chg ${cls}">${arrow} ${Math.abs(chg).toFixed(2)}%</div>
+      </div>`;
+    });
+    if(!grid.innerHTML) grid.innerHTML='<div style="color:var(--text3);font-size:12px">Nenhuma cotação retornada.</div>';
+  }catch(e){
+    grid.innerHTML=`<div style="color:var(--red);font-size:12px">Erro ao buscar cotações: ${e.message}</div>`;
+  }
+}
+
+function renderCotacoes(){refreshCotacoes()}
+
+// ─── Alertas ──────────────────────────────────────────────────────────────────
+function renderAlertas(){
+  const el=document.getElementById('alertas-list');
+  const base=[{tipo:'info',titulo:'Sistema Online',msg:'MC Nexus Hub iniciado com sucesso.'}];
+  const all=[...base,...alertas];
+  el.innerHTML='';
+  all.forEach(a=>{
+    el.innerHTML+=`<div class="alert-row al-${a.tipo}">
+      <div class="al-body"><div class="al-title">${a.titulo}</div>${a.msg}</div>
+    </div>`;
+  });
+}
+
+function addAlerta(){
+  const tipo=document.getElementById('fa-tipo').value;
+  const titulo=document.getElementById('fa-titulo').value.trim();
+  const msg=document.getElementById('fa-msg').value.trim();
+  if(!titulo) return;
+  alertas.push({tipo,titulo,msg});
+  toggleForm('form-alerta');
+  renderAlertas();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderDashboard();
+</script>
+</body>
+</html>
