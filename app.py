@@ -17,6 +17,7 @@ st.set_page_config(
 
 from styles import inject_css
 from data   import init_state
+import store
 
 inject_css()
 init_state()
@@ -49,6 +50,19 @@ with st.sidebar:
                      type="primary" if active else "secondary"):
             st.session_state.pagina = key
             st.rerun()
+
+    with st.expander("⚙️  Armazenamento"):
+        modo = "Nuvem (Supabase)" if store.using_cloud() else "Local (temporário)"
+        st.caption(f"Modo atual: **{modo}**")
+        if st.button("Testar conexão com a nuvem", use_container_width=True):
+            h = store.health()
+            if h["cloud"]:
+                st.success("Conexão OK — dados salvos na nuvem. ✅")
+            elif h["secrets"]:
+                st.error("Secrets encontrados, mas a nuvem falhou:")
+                st.code(h["error"] or "erro desconhecido")
+            else:
+                st.warning(h["error"] or "Secrets do Supabase não encontrados.")
 
     p = st.session_state.perfil
     st.markdown(f"""

@@ -48,6 +48,42 @@ def using_cloud() -> bool:
     return _client() is not None
 
 
+def health() -> dict:
+    """Testa de verdade a conexão com o Supabase e retorna um diagnóstico."""
+    info = {"secrets": False, "cloud": False, "error": ""}
+    try:
+        import streamlit as st
+        url = st.secrets.get("SUPABASE_URL")
+        key = st.secrets.get("SUPABASE_KEY")
+    except Exception as e:
+        info["error"] = f"Não achei os secrets ({type(e).__name__})."
+        return info
+    info["secrets"] = bool(url and key)
+    if not info["secrets"]:
+        faltando = []
+        if not url:
+            faltando.append("SUPABASE_URL")
+        if not key:
+            faltando.append("SUPABASE_KEY")
+        info["error"] = "Faltando nos secrets: " + ", ".join(faltando)
+        return info
+    try:
+        from supabase import create_client
+    except Exception as e:
+        info["error"] = f"Biblioteca supabase não instalada: {e}"
+        return info
+    try:
+        c = create_client(url, key)
+        c.table(_TABLE).upsert({"id": "__health__", "data": {"ok": True}}).execute()
+        res = c.table(_TABLE).select("data").eq("id", "__health__").execute()
+        info["cloud"] = bool(res.data)
+        if not info["cloud"]:
+            info["error"] = "Gravou mas não conseguiu ler de volta."
+    except Exception as e:
+        info["error"] = f"{type(e).__name__}: {e}"
+    return info
+
+
 # ── API pública ──────────────────────────────────────────────────
 def load() -> dict:
     client = _client()
