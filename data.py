@@ -197,17 +197,27 @@ _FACTORIES = {
 
 
 def init_state():
-    saved = store.load()
-    for key, factory in _FACTORIES.items():
-        if key not in st.session_state:
-            st.session_state[key] = saved[key] if saved.get(key) else factory()
-    # garante que o perfil tenha todas as chaves atuais (evolução de schema)
-    base = _init_perfil()
-    if isinstance(st.session_state.get("perfil"), dict):
-        st.session_state["perfil"] = {**base, **st.session_state["perfil"]}
+    # Carrega do armazenamento apenas uma vez por sessão (evita ler a nuvem
+    # a cada rerun). Depois, o estado vive em st.session_state.
+    if not st.session_state.get("_loaded"):
+        saved = store.load()
+        criou_padrao = False
+        for key, factory in _FACTORIES.items():
+            if saved.get(key):
+                st.session_state[key] = saved[key]
+            else:
+                st.session_state[key] = factory()
+                criou_padrao = True
+        # garante que o perfil tenha todas as chaves atuais (evolução de schema)
+        base = _init_perfil()
+        if isinstance(st.session_state.get("perfil"), dict):
+            st.session_state["perfil"] = {**base, **st.session_state["perfil"]}
+        st.session_state["_loaded"] = True
+        if criou_padrao and not saved:
+            persist()
+
     if "pagina" not in st.session_state:
         st.session_state.pagina = "Dashboard"
-    persist()
 
 
 def persist():
