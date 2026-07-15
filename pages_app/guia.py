@@ -33,18 +33,59 @@ def render():
     # ── Paleta ───────────────────────────────────────────────────
     with tab_pal:
         st.markdown('<div class="serif-lg" style="margin-bottom:6px;">Sua Paleta Quente</div>'
-                    '<div class="sec-sub" style="margin-bottom:26px;">Cores que iluminam a sua pele e combinam entre si — tudo o que você vestir sai daqui.</div>',
+                    '<div class="sec-sub" style="margin-bottom:22px;">Cores que iluminam a sua pele e combinam entre si — tudo o que você vestir sai daqui.</div>',
                     unsafe_allow_html=True)
+
+        # Estação / subtono / metais
+        if p.get("estacao"):
+            e1, e2, e3 = st.columns(3, gap="medium")
+            for col, (lab, val) in zip(
+                [e1, e2, e3],
+                [("Estação", p.get("estacao", "")),
+                 ("Subtono", p.get("subtono", "")),
+                 ("Metais",  p.get("metais", ""))],
+            ):
+                col.markdown(f"""
+                <div style="background:var(--panel);border:1px solid var(--line);padding:16px 18px;height:100%;">
+                  <div class="eyebrow" style="margin-bottom:8px;">{lab}</div>
+                  <div style="font-size:13px;color:var(--ink);line-height:1.5;">{val}</div>
+                </div>""", unsafe_allow_html=True)
+            st.markdown('<div style="height:26px;"></div>', unsafe_allow_html=True)
+
         cols = st.columns(len(p["paleta"]), gap="small")
         for col, cor in zip(cols, p["paleta"]):
             nome, hx, desc = cor[0], cor[1], cor[2]
             with col:
                 st.markdown(f"""
                 <div>
-                  <div style="height:160px;background:{hx};border:1px solid var(--line);"></div>
+                  <div style="height:150px;background:{hx};border:1px solid var(--line);"></div>
                   <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
                        color:var(--ink);margin-top:14px;">{nome}</div>
                   <div style="font-size:11.5px;color:var(--faint);line-height:1.5;margin-top:8px;">{desc}</div>
+                </div>""", unsafe_allow_html=True)
+
+        # Evitar + combinações
+        if p.get("evitar_cores") or p.get("combinacoes"):
+            st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
+            cev, ccomb = st.columns([1, 1.4], gap="large")
+            if p.get("evitar_cores"):
+                chips = "".join(C.chip(c, "soft") for c in p["evitar_cores"])
+                cev.markdown(f"""
+                <div>
+                  <div class="eyebrow" style="margin-bottom:12px;">Cores que te apagam — evite</div>
+                  <div>{chips}</div>
+                </div>""", unsafe_allow_html=True)
+            if p.get("combinacoes"):
+                blocos = ""
+                for nome, cores in p["combinacoes"]:
+                    sw = "".join(f'<div style="width:34px;height:34px;background:{hx};border:1px solid var(--line);"></div>' for hx in cores)
+                    blocos += (f'<div style="margin-bottom:16px;">'
+                               f'<div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px;">{nome}</div>'
+                               f'<div style="display:flex;gap:8px;">{sw}</div></div>')
+                ccomb.markdown(f"""
+                <div>
+                  <div class="eyebrow" style="margin-bottom:12px;">Combinações certeiras</div>
+                  {blocos}
                 </div>""", unsafe_allow_html=True)
 
     # ── Caimento (regras pro corpo) ──────────────────────────────

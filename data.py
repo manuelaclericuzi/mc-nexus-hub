@@ -14,24 +14,37 @@ import store
 
 def _init_perfil():
     return {
+        "_v": 2,  # versão do perfil (bump força atualização do conteúdo padrão)
         "arquetipo":     "Clássica Descomplicada",
-        "arquetipo_sub": "Autoridade que vai da reunião presencial à bike",
+        "arquetipo_sub": "Elegância sem esforço · Outono Quente",
         "manifesto": (
-            "Base clássica em neutros quentes que combinam com a sua coloração, cortes que "
+            "Você é Outono Quente: subtono dourado e quente. Base em neutros quentes "
+            "(camel, cru, caramelo) que iluminam a sua pele, cortes de cintura alta que "
             "respeitam a sua altura e o seu quadril, e peças que funcionam no dia híbrido — "
-            "do cliente presencial ao home office de câmera, do escritório à bike. "
-            "Autoridade sem esforço e sem gastar muito."
+            "do cliente à bike. Elegância sem esforço e sem gastar muito."
         ),
         "citacao": "Menos peças, melhor combinadas. Autoridade está no caimento, não no preço.",
 
-        # Paleta quente (ilumina sua pele) — (nome, hex, descrição)
+        # Coloração (análise Warm Autumn)
+        "estacao": "Outono Quente (Warm Autumn)",
+        "subtono": "Quente dourado · neutro-quente",
+        "metais":  "Ouro, ouro rosé e bronze — evite prata e platina.",
+
+        # Paleta Warm Autumn — (nome, hex, descrição)
         "paleta": [
-            ("Camel",            "#b98a5e", "Seu neutro-poder. Ilumina a sua pele quente — aposte nele."),
-            ("Off-white / Cru",  "#ece6da", "Base clara e leve. Ótimo para blusas e para a câmera."),
-            ("Chocolate",        "#5a4433", "Neutro escuro quente, mais suave que o preto no seu tom."),
-            ("Marinho",          "#26314a", "Âncora de autoridade para os dias de cliente."),
-            ("Azul-serenidade",  "#a9c3e0", "Fresco na câmera e lindo com camel."),
-            ("Vinho",            "#7a2e3a", "Seu acento quente — em um detalhe por vez."),
+            ("Camel",         "#b98a5e", "Sua cor principal. Warm beige que realça o seu glow dourado."),
+            ("Off-white / Cru","#ece6da", "Use no lugar do branco gelado — mais quente e favorável."),
+            ("Caramelo",      "#a5673f", "Quente e rico, ótimo pro dia a dia com elegância."),
+            ("Verde-oliva",   "#6b6f3a", "Terroso e naturalmente harmônico com o seu tom."),
+            ("Marinho",       "#26314a", "Âncora de autoridade que complementa o seu subtono."),
+            ("Deep Teal",     "#1f5c57", "Seu acento perfeito — profundidade e sofisticação sem te apagar."),
+        ],
+        "evitar_cores": ["Preto puro (colado no rosto)", "Cinza-carvão", "Azul elétrico",
+                         "Lavanda fria", "Pink / fúcsia", "Neons"],
+        "combinacoes": [
+            ("Monocromático quente", ["#b98a5e", "#ece6da", "#a5673f"]),
+            ("Terroso",              ["#6b6f3a", "#9c4a2f", "#d8c3a5"]),
+            ("Pop elegante",         ["#26314a", "#b98a5e", "#1f5c57"]),
         ],
 
         # Caimento — regras para baixinha + quadril mais largo (título, desc)
@@ -201,19 +214,24 @@ def init_state():
     # a cada rerun). Depois, o estado vive em st.session_state.
     if not st.session_state.get("_loaded"):
         saved = store.load()
-        criou_padrao = False
+        precisa_salvar = False
         for key, factory in _FACTORIES.items():
             if saved.get(key):
                 st.session_state[key] = saved[key]
             else:
                 st.session_state[key] = factory()
-                criou_padrao = True
-        # garante que o perfil tenha todas as chaves atuais (evolução de schema)
+                precisa_salvar = True
+        # Perfil: se a versão mudou, atualiza o conteúdo padrão (paleta etc.);
+        # senão, apenas completa chaves faltantes. Guarda-roupa/fotos ficam intactos.
         base = _init_perfil()
-        if isinstance(st.session_state.get("perfil"), dict):
-            st.session_state["perfil"] = {**base, **st.session_state["perfil"]}
+        cur = st.session_state.get("perfil")
+        if not isinstance(cur, dict) or cur.get("_v") != base.get("_v"):
+            st.session_state["perfil"] = base
+            precisa_salvar = True
+        else:
+            st.session_state["perfil"] = {**base, **cur}
         st.session_state["_loaded"] = True
-        if criou_padrao and not saved:
+        if precisa_salvar:
             persist()
 
     if "pagina" not in st.session_state:
