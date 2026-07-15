@@ -307,6 +307,48 @@ input, textarea, select,
 ::-webkit-scrollbar-thumb { background: var(--line); }
 
 .blk { margin-bottom: 20px; }
+
+/* ── Tabs (editorial) ──────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+  gap: 34px;
+  border-bottom: 1px solid var(--line) !important;
+}
+.stTabs [data-baseweb="tab"] {
+  font-family: var(--sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  color: var(--faint) !important;
+  padding: 4px 0 16px !important;
+  background: transparent !important;
+}
+.stTabs [data-baseweb="tab"]:hover { color: var(--ink) !important; }
+.stTabs [aria-selected="true"] { color: var(--ink) !important; }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--ink) !important; height: 2px !important; }
+.stTabs [data-baseweb="tab-border"] { background: transparent !important; }
+.stTabs [data-baseweb="tab-panel"] { padding-top: 34px; }
+
+/* ── Expander (seção recolhível) ───────────────────────────── */
+[data-testid="stExpander"] {
+  border: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: var(--paper) !important;
+}
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] details > summary {
+  font-family: var(--sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  color: var(--ink) !important;
+  padding: 16px 20px !important;
+}
+[data-testid="stExpander"] summary:hover { color: var(--muted) !important; }
+
+/* ── Extra breathing room ──────────────────────────────────── */
+.block-container { padding-top: 24px !important; }
 </style>
 """
 

@@ -127,21 +127,7 @@ def render():
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<div style="height:40px;"></div>', unsafe_allow_html=True)
-
-    # ── Expansão do guarda-roupa ─────────────────────────────────
-    C.sec_header("Expansão do Guarda-roupa", link="Ver compras")
-
-    cards = [
-        ("Trench coat",   "Gabardine camel",  "Prioridade alta",  "#a9855f", "T"),
-        ("Camisa branca", "Algodão fino",     "Prioridade alta",  "#c9c3b6", "C"),
-        ("Scarpin nude",  "Salto médio",      "Prioridade média", "#b79b86", "S"),
-        ("Lenço de seda", "Estampa clássica", "Ponto focal",      "#6f2530", "L"),
-    ]
-    cols = st.columns(4, gap="medium")
-    for col, (brand, name, badge, tone, mono) in zip(cols, cards):
-        with col:
-            C.garment_card(brand, name, tone=tone, mono=mono, badge=badge)
+    st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
 
 
 def _resumo():
