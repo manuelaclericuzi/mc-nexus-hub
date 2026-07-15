@@ -48,21 +48,29 @@ def divider():
 
 
 # ── Image placeholder tile (garment / look) ──────────────────────
-def tile(tone: str, mono: str = "", badge: str = "", ratio: str = "3 / 4") -> str:
-    """Retorna HTML de um tile-placeholder editorial (sem imagem externa)."""
-    grad = (f"linear-gradient(150deg, {tone} 0%, {_darken(tone, .18)} 100%)")
+def tile(tone: str, mono: str = "", badge: str = "", ratio: str = "3 / 4",
+         photo: str = "") -> str:
+    """
+    Retorna HTML de um tile de imagem. Se `photo` (data URI) for informado,
+    usa a foto real; senão, um placeholder tonal editorial.
+    """
     badge_html = f'<div class="tile-badge">{badge}</div>' if badge else ""
-    mono_html  = f'<div class="tile-mono">{mono}</div>' if mono else ""
+    if photo:
+        return (f'<div class="tile" style="aspect-ratio:{ratio};'
+                f'background-image:url({photo});background-size:cover;background-position:center;">'
+                f'{badge_html}</div>')
+    grad = f"linear-gradient(150deg, {tone} 0%, {_darken(tone, .18)} 100%)"
+    mono_html = f'<div class="tile-mono">{mono}</div>' if mono else ""
     return (f'<div class="tile" style="aspect-ratio:{ratio};background:{grad};">'
             f'{badge_html}{mono_html}</div>')
 
 
 def garment_card(brand: str, name: str, price: str = "",
-                 tone: str = "#3a3c40", mono: str = "", badge: str = ""):
+                 tone: str = "#3a3c40", mono: str = "", badge: str = "", photo: str = ""):
     price_html = f'<div class="g-price">{price}</div>' if price else ""
     st.markdown(f"""
     <div>
-      {tile(tone, mono, badge)}
+      {tile(tone, mono, badge, photo=photo)}
       <div class="g-brand">{brand}</div>
       <div class="g-name">{name}</div>
       {price_html}

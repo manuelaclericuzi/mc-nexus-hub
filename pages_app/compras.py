@@ -92,6 +92,7 @@ def render():
                         "motivo": motivo.strip(), "tags": tags, "preco": float(preco),
                         "tone": "#3a3c40", "comprado": False,
                     })
+                    D.persist()
                     st.rerun()
 
 
@@ -131,5 +132,6 @@ def _lacuna(c):
             for it in st.session_state.compras:
                 if it["id"] == c["id"]:
                     it["comprado"] = not it["comprado"]
+            D.persist()
             st.rerun()
     st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)

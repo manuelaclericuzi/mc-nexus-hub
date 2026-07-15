@@ -8,3 +8,7 @@ venv/
 dist/
 build/
 .DS_Store
+
+# Dados pessoais do usuário (perfil, guarda-roupa, fotos)
+atelier_data.json
+uploads/

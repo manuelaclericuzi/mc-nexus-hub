@@ -1,198 +1,219 @@
 """
-MC Atelier — Camada de dados (in-memory com session_state)
-Perfil de estilo, guarda-roupa, looks e lista de compras estratégica.
-Conteúdo baseado nas telas "Atelier Digital" (Google Stitch).
+MC Atelier — Camada de dados (session_state + persistência JSON)
+Conteúdo personalizado: assessora de investimentos, trabalho híbrido,
+estilo clássico/casual com autoridade, baixinha + quadril largo,
+coloração quente, orçamento até ~R$300 por peça.
 """
 import streamlit as st
+import store
 
 
 # ---------------------------------------------------------------------------
-# Perfil de estilo — arquétipo "Elegância Atemporal / Estratégica"
+# Perfil de estilo — "Clássica Descomplicada"
 # ---------------------------------------------------------------------------
 
 def _init_perfil():
     return {
-        "arquetipo":     "Elegância Estratégica",
-        "arquetipo_sub": "Clássica refinada · quiet luxury",
+        "arquetipo":     "Clássica Descomplicada",
+        "arquetipo_sub": "Autoridade que vai da reunião presencial à bike",
         "manifesto": (
-            "Meu estilo não é uma reação a tendências, mas uma declaração de intenção. "
-            "Cada peça é escolhida por sua integridade arquitetônica, sua conversa com o meu "
-            "legado e sua capacidade de fortalecer a mulher profissional através de precisão curada."
+            "Base clássica em neutros quentes que combinam com a sua coloração, cortes que "
+            "respeitam a sua altura e o seu quadril, e peças que funcionam no dia híbrido — "
+            "do cliente presencial ao home office de câmera, do escritório à bike. "
+            "Autoridade sem esforço e sem gastar muito."
         ),
-        "citacao": "O estilo é um ativo estratégico. Use com intenção.",
+        "citacao": "Menos peças, melhor combinadas. Autoridade está no caimento, não no preço.",
 
-        # Paleta curada — (nome, hex, descrição)
+        # Paleta quente (ilumina sua pele) — (nome, hex, descrição)
         "paleta": [
-            ("Preto Obsidiana", "#0a0a0a", "Fundação da autoridade. Alfaiataria e couro que ancoram a silhueta."),
-            ("Off-white",       "#f2efe8", "Neutro de alto contraste. Ideal para blusas de seda e camisaria estruturada."),
-            ("Cinza Ardósia",   "#3e434c", "O tom-ponte. Essencial para malhas e casacos, adiciona dimensão suave."),
-            ("Champagne",       "#e0b25f", "Só como acento. Reservado para hardware, joias e forros de seda."),
-            ("Marinho Noturno", "#5f6d88", "A alternativa suave ao preto. Perfeito para casacos de lã e tecidos pesados."),
+            ("Camel",            "#b98a5e", "Seu neutro-poder. Ilumina a sua pele quente — aposte nele."),
+            ("Off-white / Cru",  "#ece6da", "Base clara e leve. Ótimo para blusas e para a câmera."),
+            ("Chocolate",        "#5a4433", "Neutro escuro quente, mais suave que o preto no seu tom."),
+            ("Marinho",          "#26314a", "Âncora de autoridade para os dias de cliente."),
+            ("Azul-serenidade",  "#a9c3e0", "Fresco na câmera e lindo com camel."),
+            ("Vinho",            "#7a2e3a", "Seu acento quente — em um detalhe por vez."),
         ],
 
-        # Silhuetas principais — (nome, descrição)
-        "silhuetas": [
-            ("O Blazer Arquitetônico", "Ombros como fundação. Lapelas marcadas e cintura ajustada criam um perfil de comando."),
-            ("Proporção Fluida",       "Calças de cintura alta com volume, equilibradas por tops ajustados para presença estatuária."),
+        # Caimento — regras para baixinha + quadril mais largo (título, desc)
+        "caimento": [
+            ("Cintura sempre alta",            "Marca seu ponto mais fino e alonga a perna — regra de ouro pra baixinha."),
+            ("Coluna de uma cor só",           "Cima e baixo no mesmo tom criam uma linha contínua que estica a silhueta."),
+            ("Blazer curto, não longo",        "Blazer na altura do quadril ou mais curto valoriza; o longo encurta você."),
+            ("Estrutura em cima, fluidez calculada embaixo", "Ombro definido equilibra o quadril; calça reta/wide que só resvala, sem volume demais."),
+            ("Meio-tucado",                    "Prender a frente da blusa marca a cintura e organiza o look — adeus sensação de 'bagunçado'."),
+            ("Bico fino alonga; tênis branco mantém autoridade", "Sandália/scarpin nude estica a perna; no dia de bike, tênis branco de couro limpo não perde a seriedade."),
         ],
 
-        # Mandamentos / Proibições — (título, descrição)
+        # Regras práticas — mandamentos / proibições
         "mandamentos": [
-            ("Profundidade Monocromática", "Misture texturas (seda, lã, couro) na mesma família de cor para criar interesse sem poluição."),
-            ("Integridade Estrutural",     "Cada peça deve manter a forma. Priorize tecidos encorpados que projetam permanência."),
-            ("Luxo Invisível",             "Foco em alfaiataria perfeita e botões de qualidade, acima de marca visível ou logos."),
+            ("Compre pensando em 3 looks", "Só entra peça que combina com pelo menos 3 que você já tem."),
+            ("Ajuste na costureira",       "R$20 de bainha resolve 80% da sensação de caimento ruim."),
+            ("Neutro quente como base",    "Camel, cru, chocolate e marinho já se combinam entre si sozinhos."),
         ],
         "proibicoes": [
-            ("Tendências Efêmeras",     "Evite silhuetas ou cores 'fast fashion' que serão irreconhecíveis em seis meses."),
-            ("Excesso de Ornamentação", "Descarte babados, paetês ou estampas que competem com o foco no rosto."),
-            ("Bases Mal Ajustadas",     "Nunca aceite 'de prateleira' sem ajuste. Caimento ruim é falha de estratégia."),
+            ("Comprimento errado de calça", "Calça que arrasta no chão ou corta no tornozelo encurta a perna."),
+            ("Largo em cima E embaixo",     "Volume dos dois lados apaga a cintura — escolha um só."),
+            ("Impulso fora da paleta",      "A peça 'linda' que não combina com nada vira dinheiro parado no armário."),
         ],
 
         # Pilares de autoridade — (nome, descrição, completo)
         "pilares": [
-            ("Caimento",   "Alfaiataria precisa como fundação do respeito. A silhueta deve comunicar estrutura e intenção.", True),
-            ("Cores",      "Paletas estratégicas que comandam atenção sem gritar. Marinho, carvão e champagne.",            True),
-            ("Acessórios", "Os 5% finais que definem o todo. Qualidade acima de quantidade. Peças minimalistas de luxo.",   False),
-            ("Mensagem",   "Sinalização psicológica através de textura e corte. Uma narrativa de confiabilidade e sucesso.", True),
+            ("Caimento",        "O ajuste certo pro seu corpo vale mais que a marca. Bainha, cintura e comprimento no ponto.", True),
+            ("Cores quentes",   "Camel, cru, chocolate e marinho iluminam sua pele e combinam entre si.",                      True),
+            ("Versatilidade",   "Peças que vão do cliente à bike sem trocar de identidade.",                                  False),
+            ("Autoridade casual","Como ficar séria de tênis: alfaiataria + tênis branco + um bom acessório.",                 True),
         ],
-        "maturity": 75,
-
-        # Padrões de acessórios (detalhe do pilar) — (título, descrição)
-        "padroes_acessorios": [
-            ("A Regra do Relógio",  "Prefira mecanismos de qualidade com caixa proporcional ao pulso. Couro para formalidade, aço para versatilidade."),
-            ("Coesão de Metais",    "Todo hardware (relógio, fivela, brincos) deve combinar em tom. Champagne é uma alternativa quente ao prata."),
-            ("Qualidade Funcional", "Todo acessório deve ter propósito. Evite peças puramente decorativas que poluem a silhueta limpa."),
-        ],
+        "maturity": 70,
 
         # Checklist rápido antes de sair
         "checklist": [
-            ("Caimento",    "Ombro no lugar, barra certa, nada sobrando no corpo."),
-            ("Paleta",      "Dentro das cores curadas, no máximo 3 peças coloridas."),
-            ("Ponto focal", "Um destaque por look — o resto permanece neutro."),
-            ("Acabamento",  "Sapato limpo, sem fio solto, sem amassado."),
-            ("Contexto",    "O look conversa com a ocasião de hoje?"),
+            ("Cintura marcada?",     "Meio-tuck ou cintura alta no lugar."),
+            ("Uma cor dominante?",   "Coluna monocromática ou base neutra + 1 acento."),
+            ("Comprimento certo?",   "Calça resvalando o chão, blazer no quadril."),
+            ("Sapato alonga?",       "Bico fino/nude — ou tênis branco limpo no dia casual."),
+            ("Um ponto de brilho?",  "Colar ou brinco dourado — um só."),
         ],
 
         # Ocasiões — (ocasião, look, evitar)
         "ocasioes": [
-            ("Reunião / negócios",  "Alfaiataria completa em marinho ou carvão, blusa de seda, base impecável.", "Cores fortes, casual demais."),
-            ("Câmera / conteúdo",   "Cores sólidas e quentes (camel, cru, champagne); contraste com o fundo.",   "Branco puro e xadrez fino que tremem na tela."),
-            ("Criativo / dia a dia","A mesma cápsula em modo relaxado: tricô de qualidade + calça reta + mocassim.","Peças 'de qualquer jeito' sem estrutura."),
-            ("Evento / networking", "Uma peça-statement na paleta sobre base neutra impecável.",                 "Improviso de última hora."),
+            ("Cliente presencial",       "Blazer camel curto + blusa lisa + calça marinho cintura alta + sandália nude.", "Blazer longo, calça que arrasta."),
+            ("Reunião online",           "Cor sólida quente no busto (camel, vinho, azul) + colar dourado. Enquadramento limpo.", "Estampa miúda e branco puro que estoura na luz."),
+            ("Casual com autoridade (bike)","Suéter/blusa + calça marrom cintura alta + tênis branco + jaqueta estruturada.", "Moletom largo, tênis esportivo colorido."),
+            ("Escritório com parceiros", "Bomber ou blazer + top camel + calça alfaiataria + cinto marcando a cintura.", "Excesso de camadas largas."),
         ],
     }
 
 
 # ---------------------------------------------------------------------------
-# Guarda-roupa — A Coleção Essencial
+# Guarda-roupa — peças reais (das suas fotos)
 # ---------------------------------------------------------------------------
 
 def _init_guarda_roupa():
     return [
-        {"id": 1, "categoria": "Blazers",   "marca": "Atelier Sartorial", "nome": "Blazer de Lã Estruturado",  "cor": "Marinho Meia-noite", "tone": "#1c2a3a", "ocasiao": "Negócios",  "essencial": True},
-        {"id": 2, "categoria": "Camisas",   "marca": "Linen & Co.",       "nome": "Camisa Oxford Clássica",    "cor": "Branco Puro",        "tone": "#e9e6df", "ocasiao": "Negócios",  "essencial": True},
-        {"id": 3, "categoria": "Calças",    "marca": "Modern Tailor",     "nome": "Calça de Lã Slim",          "cor": "Carvão",             "tone": "#3e434c", "ocasiao": "Negócios",  "essencial": True},
-        {"id": 4, "categoria": "Casacos",   "marca": "Legacy Outerwear",  "nome": "Sobretudo de Camelo",       "cor": "Tabaco",             "tone": "#a9855f", "ocasiao": "Negócios",  "essencial": True},
-        {"id": 5, "categoria": "Camisas",   "marca": "Atelier Sartorial", "nome": "Camisa Dobby Business",     "cor": "Azul Céu",           "tone": "#8ea3c0", "ocasiao": "Câmera",    "essencial": False},
-        {"id": 6, "categoria": "Calças",    "marca": "Modern Tailor",     "nome": "Calça Formal de Noite",     "cor": "Preto Meia-noite",   "tone": "#141414", "ocasiao": "Evento",    "essencial": False},
-        {"id": 7, "categoria": "Malhas",    "marca": "Casa di Lana",      "nome": "Tricô de Cashmere",         "cor": "Off-white",          "tone": "#e2ddd2", "ocasiao": "Dia a dia", "essencial": True},
-        {"id": 8, "categoria": "Calçados",  "marca": "Heritage Shoes",    "nome": "Mocassim de Couro",         "cor": "Café",               "tone": "#4a382c", "ocasiao": "Dia a dia", "essencial": True},
-        {"id": 9, "categoria": "Acessórios","marca": "Maison Cuir",       "nome": "Bolsa Estruturada",         "cor": "Camel",              "tone": "#a9855f", "ocasiao": "Todas",     "essencial": True},
-        {"id": 10,"categoria": "Vestidos",  "marca": "Atelier Sartorial", "nome": "Vestido Reto Midi",         "cor": "Marinho",            "tone": "#1c2a3a", "ocasiao": "Evento",    "essencial": False},
-        {"id": 11,"categoria": "Acessórios","marca": "Horloge",           "nome": "Relógio Minimalista",       "cor": "Champagne",          "tone": "#c9a24a", "ocasiao": "Todas",     "essencial": False},
-        {"id": 12,"categoria": "Malhas",    "marca": "Casa di Lana",      "nome": "Blazer de Tricô",           "cor": "Bordô",              "tone": "#6f2530", "ocasiao": "Criativo",  "essencial": False},
+        {"id": 1,  "categoria": "Blazers",    "marca": "—", "nome": "Blazer camel",            "cor": "Camel",           "tone": "#b98a5e", "ocasiao": "Negócios",  "essencial": True,  "foto": ""},
+        {"id": 2,  "categoria": "Camisas",    "marca": "—", "nome": "Blusa azul-serenidade",   "cor": "Azul-serenidade", "tone": "#a9c3e0", "ocasiao": "Câmera",    "essencial": True,  "foto": ""},
+        {"id": 3,  "categoria": "Calças",     "marca": "—", "nome": "Calça wide marinho",      "cor": "Marinho",         "tone": "#26314a", "ocasiao": "Negócios",  "essencial": True,  "foto": ""},
+        {"id": 4,  "categoria": "Calçados",   "marca": "—", "nome": "Sandália nude de tiras",  "cor": "Nude",            "tone": "#d8c3a5", "ocasiao": "Todas",     "essencial": True,  "foto": ""},
+        {"id": 5,  "categoria": "Camisas",    "marca": "—", "nome": "Top marrom cavado",       "cor": "Chocolate",       "tone": "#5a4433", "ocasiao": "Evento",    "essencial": False, "foto": ""},
+        {"id": 6,  "categoria": "Calças",     "marca": "—", "nome": "Calça preta cropped",     "cor": "Preto",           "tone": "#1c1c1c", "ocasiao": "Negócios",  "essencial": True,  "foto": ""},
+        {"id": 7,  "categoria": "Casacos",    "marca": "—", "nome": "Jaqueta de couro preta",  "cor": "Preto",           "tone": "#17171a", "ocasiao": "Criativo",  "essencial": True,  "foto": ""},
+        {"id": 8,  "categoria": "Acessórios", "marca": "—", "nome": "Colar dourado c/ pingente","cor": "Dourado",        "tone": "#c9a24a", "ocasiao": "Todas",     "essencial": True,  "foto": ""},
+        {"id": 9,  "categoria": "Malhas",     "marca": "—", "nome": "Suéter canelado camel",   "cor": "Camel",           "tone": "#c39b6e", "ocasiao": "Dia a dia", "essencial": True,  "foto": ""},
+        {"id": 10, "categoria": "Calças",     "marca": "—", "nome": "Calça marrom alfaiataria","cor": "Marrom",          "tone": "#6a5140", "ocasiao": "Dia a dia", "essencial": True,  "foto": ""},
+        {"id": 11, "categoria": "Casacos",    "marca": "—", "nome": "Bomber creme",            "cor": "Creme",           "tone": "#e4dcc7", "ocasiao": "Criativo",  "essencial": False, "foto": ""},
+        {"id": 12, "categoria": "Acessórios", "marca": "—", "nome": "Cinto de fivela dourada", "cor": "Caramelo",        "tone": "#7a5a3a", "ocasiao": "Todas",     "essencial": True,  "foto": ""},
     ]
 
 
 # ---------------------------------------------------------------------------
-# Looks montados
+# Looks — dos seus dias reais
 # ---------------------------------------------------------------------------
 
 def _init_looks():
     return [
-        {"id": 1, "nome": "A Monocromática Estratégica", "ocasiao": "Negócios", "nivel": "Alto impacto · Formal",
-         "descricao": "Uma aula de textura e silhueta. Alfaiataria em tons de cinza que projeta autoridade silenciosa.",
-         "pecas": ["Blazer de Lã Estruturado", "Calça de Lã Slim", "Mocassim de Couro"]},
-        {"id": 2, "nome": "Camel & Cru", "ocasiao": "Câmera", "nivel": "Semiformal · Texturas",
-         "descricao": "Neutros quentes que iluminam na tela sem estourar. Ideal para gravação e conteúdo.",
-         "pecas": ["Sobretudo de Camelo", "Camisa Oxford Clássica", "Calça de Lã Slim"]},
-        {"id": 3, "nome": "Cápsula Relaxada", "ocasiao": "Dia a dia", "nivel": "Elegância casual",
-         "descricao": "A base da semana: qualidade sem esforço aparente.",
-         "pecas": ["Tricô de Cashmere", "Calça de Lã Slim", "Mocassim de Couro"]},
-        {"id": 4, "nome": "Statement Discreto", "ocasiao": "Evento", "nivel": "Casual elegante · Peça-statement",
-         "descricao": "Um único ponto de cor sobre base neutra impecável.",
-         "pecas": ["Blazer de Tricô", "Calça Formal de Noite", "Bolsa Estruturada"]},
+        {"id": 1, "nome": "Dia de Cliente", "ocasiao": "Cliente presencial", "nivel": "Clássico · Autoridade",
+         "descricao": "Blazer camel curto sobre blusa lisa, calça marinho de cintura alta e sandália nude. Seu neutro-poder no comando.",
+         "pecas": ["Blazer camel", "Blusa azul-serenidade", "Calça wide marinho", "Sandália nude de tiras"]},
+        {"id": 2, "nome": "Câmera Pronta", "ocasiao": "Reunião online", "nivel": "Do busto pra cima, impecável",
+         "descricao": "Cor sólida quente no busto e um colar dourado como ponto focal. Simples e eficaz na tela.",
+         "pecas": ["Suéter canelado camel", "Colar dourado c/ pingente"]},
+        {"id": 3, "nome": "Séria de Tênis", "ocasiao": "Casual com autoridade (bike)", "nivel": "Casual · Autoridade",
+         "descricao": "O dia de bike sem perder a seriedade: alfaiataria de cintura alta + tênis branco limpo + jaqueta estruturada.",
+         "pecas": ["Suéter canelado camel", "Calça marrom alfaiataria", "Jaqueta de couro preta"]},
+        {"id": 4, "nome": "Parceiros no Escritório", "ocasiao": "Escritório com parceiros", "nivel": "Casual estruturado",
+         "descricao": "Camada estruturada por cima, cintura marcada e um detalhe dourado. Autoridade descontraída.",
+         "pecas": ["Bomber creme", "Calça marrom alfaiataria", "Cinto de fivela dourada"]},
     ]
 
 
 # ---------------------------------------------------------------------------
-# Lista de compras estratégica (lacunas do cápsula)
+# Lista de compras — lacunas úteis, até ~R$300
 # ---------------------------------------------------------------------------
 
 def _init_compras():
     return [
-        {"id": 1, "item": "Blazer Azul Marinho Estruturado", "prioridade": "Alta",
-         "motivo": "Peça fundamental para reuniões de alta importância. A cor navy projeta confiança e estabilidade, enquanto o corte estruturado reforça a silhueta de autoridade.",
-         "tags": [("Custo por uso", "Baixo"), ("Versatilidade", "9/10")],
-         "preco": 1800.0, "tone": "#1c2a3a", "comprado": False},
-        {"id": 2, "item": "Sapato Oxford Café", "prioridade": "Média",
-         "motivo": "Completa o traje formal com elegância discreta. O tom café é mais versátil que o preto para transições do dia para a noite.",
-         "tags": [("Custo por uso", "Médio"), ("Qualidade", "Herança")],
-         "preco": 1200.0, "tone": "#4a382c", "comprado": False},
-        {"id": 3, "item": "Camisa Branca de Popeline", "prioridade": "Alta",
-         "motivo": "Item de giro rápido essencial. Substituição necessária para manter o aspecto impecável e o 'frescor' da imagem pessoal.",
-         "tags": [("Custo por uso", "Mínimo"), ("Checklist", "Algodão egípcio")],
-         "preco": 450.0, "tone": "#e9e6df", "comprado": False},
+        {"id": 1, "item": "Calça alfaiataria reta cintura alta (preta ou marinho)", "prioridade": "Alta",
+         "motivo": "A base coringa que falta: alonga a perna, marca a cintura e vai do cliente ao escritório.",
+         "tags": [("Custo por uso", "Baixo"), ("Onde", "Renner / Amaro")], "preco": 249.0, "tone": "#26314a", "comprado": False},
+        {"id": 2, "item": "Blazer curto estruturado (camel ou marinho)", "prioridade": "Alta",
+         "motivo": "Curto no quadril valoriza a sua altura; camel ilumina. Autoridade instantânea sobre qualquer look.",
+         "tags": [("Caimento", "Comprimento no quadril"), ("Onde", "C&A / Zara")], "preco": 300.0, "tone": "#b98a5e", "comprado": False},
+        {"id": 3, "item": "Tênis branco de couro minimalista", "prioridade": "Alta",
+         "motivo": "Para os dias de bike sem perder a seriedade. Couro liso, cano baixo, sem logo grande.",
+         "tags": [("Versatilidade", "9/10"), ("Onde", "Vizzano / Renner")], "preco": 250.0, "tone": "#ededed", "comprado": False},
+        {"id": 4, "item": "Scarpin ou mule bico fino nude (salto médio)", "prioridade": "Média",
+         "motivo": "Alonga a perna e combina com tudo. Salto médio pra aguentar o dia inteiro.",
+         "tags": [("Alonga", "Sim"), ("Onde", "Vizzano / Beira Rio")], "preco": 200.0, "tone": "#d8c3a5", "comprado": False},
+        {"id": 5, "item": "Blusa lisa de cor sólida p/ câmera (azul ou cru)", "prioridade": "Média",
+         "motivo": "Cor cheia no busto rende na reunião online. Tecido firme que não amassa.",
+         "tags": [("Câmera", "Cor sólida"), ("Onde", "Hering / Renner")], "preco": 130.0, "tone": "#a9c3e0", "comprado": False},
+        {"id": 6, "item": "Cinto marrom/caramelo para marcar cintura", "prioridade": "Baixa",
+         "motivo": "O truque anti-'bagunçado': define a cintura na hora e organiza o look.",
+         "tags": [("Truque", "Meio-tuck"), ("Onde", "Renner")], "preco": 90.0, "tone": "#7a5a3a", "comprado": False},
     ]
 
 
 def _init_sugestoes():
     return [
-        ("Relógio Minimalista 'Ares'", "Especial para o seu perfil", "#232323"),
-        ("Óculos de Sol 'Persona'",    "Acessório de transição",     "#3a3c40"),
+        ("Tênis branco de couro", "Autoridade casual", "#ededed"),
+        ("Scarpin nude bico fino", "Alonga a perna",   "#d8c3a5"),
     ]
 
 
 def _init_agenda():
     return [
-        {"hora": "09:00", "titulo": "Reunião de diretoria",  "meta": "Alto impacto · Formal"},
-        {"hora": "13:30", "titulo": "Almoço de estratégia",  "meta": "Semiformal · Texturas"},
-        {"hora": "19:00", "titulo": "Abertura de exposição", "meta": "Elegância casual · Statement"},
+        {"hora": "09:00", "titulo": "Reunião com parceiros", "meta": "Escritório · Autoridade casual"},
+        {"hora": "11:30", "titulo": "Call com cliente",      "meta": "Online · Câmera pronta"},
+        {"hora": "15:00", "titulo": "Reunião presencial",    "meta": "Cliente · Clássico"},
     ]
 
 
 def _look_of_day():
     return {
-        "titulo":    "A Monocromática Estratégica",
-        "descricao": "Uma aula de textura e silhueta. Lã em tons de cinza encontra couro polido "
-                     "num conjunto que irradia autoridade silenciosa.",
+        "titulo":    "Dia de Cliente",
+        "descricao": "Blazer camel curto sobre blusa lisa, calça marinho de cintura alta e "
+                     "sandália nude. Autoridade clássica com o seu neutro-poder.",
         "detalhes": [
-            ("Caimento",         "Ombro estruturado com leve afunilamento na cintura. Alfaiataria precisa."),
-            ("Harmonia de cor",  "Cinzas tonais dão profundidade sem a dureza do preto puro."),
-            ("Foco no acessório","Relógio minimalista. Um único ponto de brilho."),
+            ("Caimento",     "Blazer no quadril e calça cintura alta alongam a silhueta."),
+            ("Cor",          "Camel ilumina a sua pele; marinho ancora com autoridade."),
+            ("Ponto focal",  "Um brinco ou colar dourado — nada além disso."),
         ],
     }
 
 
 # ---------------------------------------------------------------------------
-# Init
+# Init + persistência
 # ---------------------------------------------------------------------------
 
+_FACTORIES = {
+    "perfil":       _init_perfil,
+    "guarda_roupa": _init_guarda_roupa,
+    "looks":        _init_looks,
+    "compras":      _init_compras,
+    "sugestoes":    _init_sugestoes,
+    "agenda":       _init_agenda,
+    "look_of_day":  _look_of_day,
+}
+
+
 def init_state():
-    defaults = {
-        "perfil":       _init_perfil,
-        "guarda_roupa": _init_guarda_roupa,
-        "looks":        _init_looks,
-        "compras":      _init_compras,
-        "sugestoes":    _init_sugestoes,
-        "agenda":       _init_agenda,
-        "look_of_day":  _look_of_day,
-    }
-    for key, factory in defaults.items():
+    saved = store.load()
+    for key, factory in _FACTORIES.items():
         if key not in st.session_state:
-            st.session_state[key] = factory()
+            st.session_state[key] = saved[key] if saved.get(key) else factory()
+    # garante que o perfil tenha todas as chaves atuais (evolução de schema)
+    base = _init_perfil()
+    if isinstance(st.session_state.get("perfil"), dict):
+        st.session_state["perfil"] = {**base, **st.session_state["perfil"]}
     if "pagina" not in st.session_state:
         st.session_state.pagina = "Dashboard"
+    persist()
+
+
+def persist():
+    """Grava o estado atual no arquivo JSON."""
+    data = {k: st.session_state[k] for k in store.KEYS if k in st.session_state}
+    store.save(data)
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +230,7 @@ def resumo_guarda_roupa() -> dict:
         "categorias": cats,
         "essenciais": sum(1 for p in gr if p["essencial"]),
         "cores": len({p["cor"] for p in gr}),
+        "com_foto": sum(1 for p in gr if p.get("foto")),
     }
 
 
