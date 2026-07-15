@@ -23,7 +23,7 @@ DATA_FILE = os.path.join(os.path.dirname(__file__), "atelier_data.json")
 
 # Chaves de estado que são persistidas
 KEYS = ["perfil", "guarda_roupa", "looks", "compras", "sugestoes",
-        "agenda", "look_of_day"]
+        "agenda", "look_of_day", "semana"]
 
 _TABLE = "atelier_state"
 _ROW_ID = "default"

@@ -166,6 +166,19 @@ def _init_compras():
     ]
 
 
+def _init_semana():
+    """Plano da semana — cada dia aponta para um look (look_id) ou fica livre."""
+    return [
+        {"dia": "SEG", "ocasiao": "Escritório",       "tag": "Parceiros",         "clima": "sol",   "look_id": 4},
+        {"dia": "TER", "ocasiao": "Reunião online",   "tag": "Câmera pronta",     "clima": "sol",   "look_id": 2},
+        {"dia": "QUA", "ocasiao": "Casual · bike",    "tag": "Autoridade casual", "clima": "nuvem", "look_id": 3},
+        {"dia": "QUI", "ocasiao": "Cliente",          "tag": "Apresentação",      "clima": "sol",   "look_id": 1},
+        {"dia": "SEX", "ocasiao": "Business casual",  "tag": "Happy hour",        "clima": "sol",   "look_id": 4},
+        {"dia": "SÁB", "ocasiao": "Evento social",    "tag": "Lazer curado",      "clima": "sol",   "look_id": None},
+        {"dia": "DOM", "ocasiao": "Descanso",         "tag": "Doméstico",         "clima": "nuvem", "look_id": None},
+    ]
+
+
 def _init_sugestoes():
     return [
         ("Tênis branco de couro", "Autoridade casual", "#ededed"),
@@ -206,6 +219,7 @@ _FACTORIES = {
     "sugestoes":    _init_sugestoes,
     "agenda":       _init_agenda,
     "look_of_day":  _look_of_day,
+    "semana":       _init_semana,
 }
 
 
@@ -264,3 +278,34 @@ def resumo_guarda_roupa() -> dict:
 
 def total_compras() -> float:
     return sum(c["preco"] for c in st.session_state.compras if not c["comprado"])
+
+
+def look_by_id(look_id):
+    """Retorna o look com o id informado, ou None."""
+    if look_id is None:
+        return None
+    for lk in st.session_state.looks:
+        if lk["id"] == look_id:
+            return lk
+    return None
+
+
+def tone_for(nome: str) -> str:
+    """Cor (tone) da peça pelo nome; neutro se não encontrar."""
+    for p in st.session_state.guarda_roupa:
+        if p["nome"] == nome:
+            return p.get("tone", "#3a3c40")
+    return "#3a3c40"
+
+
+def emergencia() -> dict:
+    """Look à prova de erro, montado só com peças que ela já tem."""
+    return {
+        "titulo": "Camel Descomplicado",
+        "pecas":  ["Suéter canelado camel", "Calça marrom alfaiataria", "Sandália nude de tiras"],
+        "razoes": [
+            "Coluna quente monocromática — alonga a silhueta na hora.",
+            "Zero decisão: pega e veste nos dias corridos, sem errar.",
+        ],
+        "custo": "R$ 0 (já é seu)",
+    }

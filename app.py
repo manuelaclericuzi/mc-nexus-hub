@@ -22,11 +22,12 @@ import store
 inject_css()
 init_state()
 
-from pages_app import dashboard, guia, guarda_roupa, looks, compras
+from pages_app import dashboard, guia, guarda_roupa, looks, compras, planner
 
 # ── Navegação ─────────────────────────────────────────────────
 NAV = [
     ("Dashboard",       "Dashboard"),
+    ("Calendário",      "Calendário"),
     ("Guarda-roupa",    "Guarda-roupa"),
     ("Looks",           "Looks"),
     ("Guia de Estilo",  "Guia de Estilo"),
@@ -84,6 +85,7 @@ with st.sidebar:
 pagina = st.session_state.get("pagina", "Dashboard")
 
 if   pagina == "Dashboard":      dashboard.render()
+elif pagina == "Calendário":     planner.render()
 elif pagina == "Guarda-roupa":   guarda_roupa.render()
 elif pagina == "Looks":          looks.render()
 elif pagina == "Guia de Estilo": guia.render()
