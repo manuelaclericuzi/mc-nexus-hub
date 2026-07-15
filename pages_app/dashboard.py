@@ -1,110 +1,155 @@
-"""Página: Dashboard"""
+"""
+MC Atelier — Dashboard
+"""
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
-from components import metric_card, gold_divider, section_title
-from data import resumo_receitas, calcular_receita
-
-
-def _fmt_brl(v: float) -> str:
-    return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+import components as C
 
 
 def render():
-    section_title("Dashboard", "Visão geral do escritório")
-    gold_divider()
+    C.topbar()
 
-    clientes   = st.session_state.clientes
-    receitas   = st.session_state.receitas
-    captacoes  = st.session_state.captacoes
-    metas      = st.session_state.metas
-    resumo     = resumo_receitas()
+    perfil = st.session_state.perfil
+    lod    = st.session_state.look_of_day
 
-    ativos    = sum(1 for c in clientes if c["status"] == "Ativo")
-    patrimonio = sum(c["patrimonio"] for c in clientes)
-    captacao_total = sum(c["valor"] for c in captacoes[-3:])  # últimos 3 meses
+    # ── Hero: Look do Dia + Checklist de Autoridade ──────────────
+    col_hero, col_chk = st.columns([2, 1], gap="medium")
 
-    # ── KPI cards ──────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        metric_card("Clientes Ativos", str(ativos), "▲ 2 este mês")
-    with c2:
-        metric_card("AUM Total", _fmt_brl(patrimonio), "▲ 4,2%")
-    with c3:
-        metric_card("Receita Líquida", _fmt_brl(resumo["liquida"]), "▲ 8,1%")
-    with c4:
-        pct_meta = metas["receita_bruta"]["realizado"] / metas["receita_bruta"]["meta"] * 100
-        metric_card("Meta Receita", f"{pct_meta:.0f}%", f"R$ {metas['receita_bruta']['realizado']:,.0f} / R$ {metas['receita_bruta']['meta']:,.0f}")
+    with col_hero:
+        st.markdown(f"""
+        <div style="position:relative;height:560px;overflow:hidden;
+             background:linear-gradient(155deg,#4a4d55 0%,#26282d 55%,#141517 100%);">
+          <div style="position:absolute;inset:0;
+               background:linear-gradient(to top, rgba(0,0,0,.62) 0%, rgba(0,0,0,0) 55%);"></div>
+          <div style="position:absolute;left:44px;right:44px;bottom:44px;color:#fff;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:.3em;
+                 text-transform:uppercase;margin-bottom:18px;opacity:.9;">Look do dia</div>
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:600;
+                 font-size:46px;line-height:1.05;margin-bottom:16px;max-width:16ch;">{lod['titulo']}</div>
+            <div style="font-size:15px;line-height:1.6;max-width:52ch;opacity:.92;margin-bottom:26px;">
+                 {lod['descricao']}</div>
+            <span style="display:inline-block;background:#fff;color:#000;font-size:11px;font-weight:700;
+                 letter-spacing:.2em;text-transform:uppercase;padding:14px 30px;">Detalhar inventário</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    gold_divider()
+    with col_chk:
+        itens = "".join(f"""
+          <div class="chk-item">
+            <div class="chk-mark">●</div>
+            <div>
+              <div class="chk-title">{t}</div>
+              <div class="chk-desc">{d}</div>
+            </div>
+          </div>""" for t, d in lod["detalhes"])
+        st.markdown(f"""
+        <div style="height:560px;background:var(--panel);border:1px solid var(--line);
+             padding:40px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div class="eyebrow" style="margin-bottom:10px;">Checklist de autoridade</div>
+            <div class="serif-md" style="margin-bottom:34px;">Detalhes curados</div>
+            {itens}
+          </div>
+          <div style="border-top:1px solid var(--line);padding-top:26px;">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;
+                 color:var(--ink);line-height:1.5;margin-bottom:12px;">"{perfil['citacao']}"</div>
+            <div class="eyebrow">— {perfil['arquetipo']}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # ── Gráficos ────────────────────────────────────────────────
-    col_left, col_right = st.columns([3, 2])
+    st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
 
-    with col_left:
-        st.markdown("<h3>Captação Mensal</h3>", unsafe_allow_html=True)
-        meses  = [c["mes"] for c in captacoes]
-        valores = [c["valor"] / 1000 for c in captacoes]
-        fig = go.Figure(go.Bar(
-            x=meses, y=valores,
-            marker_color=["#C9A84C" if i >= 9 else "#2A2A2A" for i in range(12)],
-            text=[f"R${v:.0f}k" for v in valores],
-            textposition="outside",
-            textfont=dict(color="#888", size=10),
-        ))
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#888", size=11),
-            margin=dict(l=0, r=0, t=10, b=0),
-            height=260,
-            showlegend=False,
-            xaxis=dict(showgrid=False, color="#555"),
-            yaxis=dict(showgrid=True, gridcolor="#1E1E1E", color="#555"),
+    # ── Agenda + Progresso ───────────────────────────────────────
+    col_ag, col_pr = st.columns(2, gap="medium")
+
+    with col_ag:
+        rows = "".join(f"""
+          <div class="agenda-row">
+            <div class="agenda-time">{a['hora']}</div>
+            <div>
+              <div class="agenda-title">{a['titulo']}</div>
+              <div class="agenda-meta">{a['meta']}</div>
+            </div>
+          </div>""" for a in st.session_state.agenda)
+        st.markdown(f"""
+        <div style="background:var(--paper);border:1px solid var(--line);padding:36px;height:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
+            <div>
+              <div class="eyebrow" style="margin-bottom:8px;">Agenda</div>
+              <div class="serif-lg">Sua agenda</div>
+            </div>
+            <span class="sec-link">Ver tudo</span>
+          </div>
+          {rows}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_pr:
+        resumo = _resumo()
+        bars = "".join(
+            f'<div style="flex:1;background:{"#ffffff" if hl else "rgba(255,255,255,.32)"};'
+            f'height:{h}%;"></div>'
+            for h, hl in resumo["bars"]
         )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_right:
-        st.markdown("<h3>Distribuição AUM</h3>", unsafe_allow_html=True)
-        labels = ["Renda Fixa", "Multimercado", "R. Variável", "Prev.", "FII"]
-        values = [40, 25, 18, 10, 7]
-        colors = ["#C9A84C", "#A8863A", "#8A6D30", "#6B5326", "#4D3A1C"]
-        fig2 = go.Figure(go.Pie(
-            labels=labels, values=values,
-            hole=0.6,
-            marker=dict(colors=colors, line=dict(color="#0D0D0D", width=2)),
-            textinfo="percent",
-            textfont=dict(color="#E8E8E8", size=11),
-        ))
-        fig2.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#888"),
-            margin=dict(l=0, r=0, t=10, b=0),
-            height=260,
-            showlegend=True,
-            legend=dict(font=dict(color="#888", size=10), bgcolor="rgba(0,0,0,0)"),
+        swatches = "".join(
+            f'<div style="width:22px;height:22px;background:{hx};border:1px solid rgba(255,255,255,.25);"></div>'
+            for hx in resumo["palette"]
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown(f"""
+        <div style="background:var(--black);color:#fff;padding:36px;height:100%;
+             display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;">
+            <div>
+              <div style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+                   color:rgba(255,255,255,.6);margin-bottom:8px;">Evolução</div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:28px;">Progresso de estilo</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Playfair Display',serif;font-size:46px;font-weight:700;line-height:1;">{resumo['pct']}%</div>
+              <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);">Cápsula utilizada</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:14px;height:150px;margin-bottom:30px;padding:0 4px;">
+            {bars}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;
+               border-top:1px solid rgba(255,255,255,.2);padding-top:26px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:12px;">Paleta base</div>
+              <div style="display:flex;gap:8px;">{swatches}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:12px;">Próximo passo</div>
+              <div style="font-size:13px;font-weight:600;">Trench coat clássico</div>
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    gold_divider()
+    st.markdown('<div style="height:40px;"></div>', unsafe_allow_html=True)
 
-    # ── Últimas receitas ────────────────────────────────────────
-    st.markdown("<h3>Últimas Receitas Lançadas</h3>", unsafe_allow_html=True)
-    rows = []
-    for r in reversed(st.session_state.receitas[-5:]):
-        calc = calcular_receita(r["valor_aplicacao"], r["roa"], r["repasse"])
-        rows.append({
-            "Cliente":        r["cliente"],
-            "Produto":        r["produto"],
-            "Valor Aplic.":   _fmt_brl(r["valor_aplicacao"]),
-            "ROA (%)":        f"{r['roa']:.1f}%",
-            "Repasse":        f"{r['repasse']*100:.0f}%",
-            "Rec. Líquida":   _fmt_brl(calc["receita_liquida"]),
-            "Data":           r["data"],
-        })
-    import pandas as pd
-    st.dataframe(
-        pd.DataFrame(rows),
-        use_container_width=True,
-        hide_index=True,
-    )
+    # ── Expansão do guarda-roupa ─────────────────────────────────
+    C.sec_header("Expansão do Guarda-roupa", link="Ver compras")
+
+    cards = [
+        ("Trench coat",   "Gabardine camel",  "Prioridade alta",  "#a9855f", "T"),
+        ("Camisa branca", "Algodão fino",     "Prioridade alta",  "#c9c3b6", "C"),
+        ("Scarpin nude",  "Salto médio",      "Prioridade média", "#b79b86", "S"),
+        ("Lenço de seda", "Estampa clássica", "Ponto focal",      "#6f2530", "L"),
+    ]
+    cols = st.columns(4, gap="medium")
+    for col, (brand, name, badge, tone, mono) in zip(cols, cards):
+        with col:
+            C.garment_card(brand, name, tone=tone, mono=mono, badge=badge)
+
+
+def _resumo():
+    gr = st.session_state.guarda_roupa
+    total = len(gr)
+    essenciais = sum(1 for p in gr if p["essencial"])
+    pct = round(essenciais / total * 100) if total else 0
+    bars = [(40, False), (62, False), (55, False), (85, True),
+            (70, False), (34, False), (24, False)]
+    palette = ["#e8e4dc", "#a9855f", "#3a3c40", "#1c2a3a"]
+    return {"pct": pct, "bars": bars, "palette": palette}
