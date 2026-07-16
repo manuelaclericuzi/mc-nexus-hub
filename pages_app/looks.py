@@ -64,22 +64,39 @@ def _sugeridos():
       <div style="font-size:13px;color:var(--muted);line-height:1.6;">
         O MC Atelier combina as peças do seu <b>Guarda-roupa</b> em looks completos,
         seguindo a sua paleta Outono Quente, a coluna monocromática e o seu ponto de
-        ouro. Quanto mais peças você cadastra, mais opções ele monta.
+        ouro. Escolha uma <b>peça pra começar</b> — o app monta em volta dela — ou
+        deixe ele decidir tudo.
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Filtro de ocasião a partir das ocasiões reais das peças
+    _QUALQUER = "— qualquer peça —"
+    pecas_nomes = [p["nome"] for p in st.session_state.guarda_roupa]
     occs = sorted({p.get("ocasiao") for p in st.session_state.guarda_roupa
                    if p.get("ocasiao") and p.get("ocasiao") != "Todas"})
-    f1, f2 = st.columns([2, 1])
-    alvo = f1.selectbox("Para qual ocasião?", ["Todas as ocasiões"] + occs,
-                        key="auto_occ", label_visibility="collapsed")
-    gerar = f2.button("Montar looks", type="primary", use_container_width=True)
 
-    if gerar or st.session_state.get("_auto_gerados") is None:
-        alvo_arg = None if alvo == "Todas as ocasiões" else alvo
-        st.session_state["_auto_gerados"] = D.montar_looks(n=6, ocasiao=alvo_arg)
+    st.markdown('<div class="eyebrow" style="margin-bottom:8px;">Começar de uma peça · '
+                'para qual ocasião</div>', unsafe_allow_html=True)
+    f1, f2, f3 = st.columns([2, 2, 1])
+    ancora = f1.selectbox("Peça âncora", [_QUALQUER] + pecas_nomes,
+                          key="auto_anc", label_visibility="collapsed")
+    alvo = f2.selectbox("Ocasião", ["Todas as ocasiões"] + occs,
+                        key="auto_occ", label_visibility="collapsed")
+    gerar = f3.button("Montar looks", type="primary", use_container_width=True)
+
+    anc_arg = None if ancora == _QUALQUER else ancora
+    alvo_arg = None if alvo == "Todas as ocasiões" else alvo
+    params = (alvo_arg, anc_arg)
+
+    if gerar or st.session_state.get("_auto_params") != params:
+        st.session_state["_auto_gerados"] = D.montar_looks(n=6, ocasiao=alvo_arg,
+                                                           ancora=anc_arg)
+        st.session_state["_auto_params"] = params
+
+    if anc_arg:
+        st.markdown(f'<div style="font-size:12px;color:var(--muted);margin:14px 0 2px;">'
+                    f'Looks em volta de <b style="color:var(--ink);">{anc_arg}</b>:</div>',
+                    unsafe_allow_html=True)
 
     gerados = st.session_state.get("_auto_gerados") or []
     if not gerados:

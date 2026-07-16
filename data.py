@@ -462,8 +462,20 @@ def _nomear(combo: dict) -> str:
     return " & ".join(cores[:2])
 
 
-def montar_looks(n: int = 6, ocasiao: str = None) -> list:
+def _slot_de(nome: str, porslot: dict):
+    """Encontra a peça pelo nome e o slot (papel) a que ela pertence."""
+    for s in _SLOTS:
+        for p in porslot[s]:
+            if p["nome"] == nome:
+                return p, s
+    return None, None
+
+
+def montar_looks(n: int = 6, ocasiao: str = None, ancora: str = None) -> list:
     """Gera looks combinando as peças do guarda-roupa da usuária.
+
+    Se `ancora` (nome de uma peça) for informado, todos os looks incluem
+    essa peça e são montados em volta dela.
 
     Retorna uma lista de dicts no mesmo formato de `looks`, com extras
     `auto=True`, `motivos=[...]` e `score` para a tela de sugestões.
@@ -471,6 +483,11 @@ def montar_looks(n: int = 6, ocasiao: str = None) -> list:
     gr = st.session_state.guarda_roupa
     porslot = {s: [p for p in gr if p["categoria"] in cats]
                for s, cats in _SLOTS.items()}
+
+    # Peça âncora: fixa o slot dela e monta o resto em volta.
+    anc_piece, anc_slot = (_slot_de(ancora, porslot) if ancora else (None, None))
+    if anc_piece:
+        porslot[anc_slot] = [anc_piece]
 
     topos = porslot["topo"] or [None]
     bases = porslot["base"] or [None]
@@ -483,12 +500,18 @@ def montar_looks(n: int = 6, ocasiao: str = None) -> list:
                 continue
             for calc in calcs:
                 combo = {"topo": topo, "base": base, "calcado": calc}
-                cam = _melhor_extra(combo, porslot["camada"], ocasiao, sempre=False)
-                if cam:
-                    combo["camada"] = cam
-                ac = _melhor_extra(combo, porslot["acab"], ocasiao, sempre=True)
-                if ac:
-                    combo["acab"] = ac
+                if anc_slot == "camada":
+                    combo["camada"] = anc_piece
+                else:
+                    cam = _melhor_extra(combo, porslot["camada"], ocasiao, sempre=False)
+                    if cam:
+                        combo["camada"] = cam
+                if anc_slot == "acab":
+                    combo["acab"] = anc_piece
+                else:
+                    ac = _melhor_extra(combo, porslot["acab"], ocasiao, sempre=True)
+                    if ac:
+                        combo["acab"] = ac
 
                 pecas = [combo[s] for s in ("topo", "camada", "base", "calcado", "acab")
                          if combo.get(s)]
