@@ -4,6 +4,7 @@ Conteúdo personalizado: assessora de investimentos, trabalho híbrido,
 estilo clássico/casual com autoridade, baixinha + quadril largo,
 coloração quente, orçamento até ~R$300 por peça.
 """
+import colorsys
 import streamlit as st
 import store
 
@@ -309,3 +310,225 @@ def emergencia() -> dict:
         ],
         "custo": "R$ 0 (já é seu)",
     }
+
+
+# ---------------------------------------------------------------------------
+# Motor de montagem automática — combina o SEU acervo em looks
+# ---------------------------------------------------------------------------
+# Cada categoria vira um "papel" (slot) no look. Um look completo é
+# topo + base + calçado, com camada e acabamento opcionais.
+_SLOTS = {
+    "topo":    {"Camisas", "Malhas", "Vestidos", "Blusas"},
+    "base":    {"Calças", "Saias", "Shorts"},
+    "calcado": {"Calçados"},
+    "camada":  {"Blazers", "Casacos", "Coletes"},
+    "acab":    {"Acessórios"},
+}
+
+# Paleta quente Outono que harmoniza entre si (do Guia de Estilo).
+_EM_PALETA = {"Camel", "Caramelo", "Marrom", "Chocolate", "Creme", "Nude",
+              "Off-white", "Cru", "Dourado", "Marinho", "Verde-oliva", "Deep Teal"}
+# Neutros que "fecham" qualquer look (paleta + pretos/cinzas fora do rosto).
+_NEUTRO_OK = _EM_PALETA | {"Preto", "Cinza"}
+
+# Famílias de cor para detectar a "coluna monocromática" (regra de ouro).
+_FAMILIA = {
+    "Camel": "terroso", "Caramelo": "terroso", "Marrom": "terroso",
+    "Chocolate": "terroso", "Creme": "terroso", "Nude": "terroso",
+    "Off-white": "terroso", "Cru": "terroso", "Dourado": "terroso",
+    "Marinho": "marinho", "Verde-oliva": "oliva", "Deep Teal": "teal",
+    "Azul-serenidade": "azul", "Preto": "preto", "Cinza": "cinza",
+}
+
+
+def _hsl(hexc: str):
+    hexc = (hexc or "").lstrip("#")
+    if len(hexc) != 6:
+        return (0.0, 0.0, 0.5)
+    try:
+        r, g, b = (int(hexc[i:i+2], 16) / 255 for i in (0, 2, 4))
+    except ValueError:
+        return (0.0, 0.0, 0.5)
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return (h * 360, s, l)
+
+
+def _neutro_tone(hexc: str) -> bool:
+    _, s, l = _hsl(hexc)
+    return s < 0.22 or l < 0.12 or l > 0.90
+
+
+def _quente_tone(hexc: str) -> bool:
+    h, _, _ = _hsl(hexc)
+    return h <= 65 or h >= 330          # vermelhos / laranjas / dourados
+
+
+def _fam(p: dict) -> str:
+    """Família de cor da peça — pelo nome da cor, com fallback pelo tom."""
+    cor = p.get("cor", "")
+    if cor in _FAMILIA:
+        return _FAMILIA[cor]
+    if _neutro_tone(p.get("tone", "")):
+        return "neutro"
+    return "quente" if _quente_tone(p.get("tone", "")) else "frio"
+
+
+def _harmonico(p: dict) -> bool:
+    """A peça 'fecha' com a paleta quente (pelo nome ou pelo tom)?"""
+    if p.get("cor") in _NEUTRO_OK:
+        return True
+    tone = p.get("tone", "")
+    return _neutro_tone(tone) or _quente_tone(tone)
+
+
+def _avaliar(combo: dict, alvo: str = None):
+    """Pontua um combo {slot: peça|None}. Retorna (score, motivos)."""
+    pecas = [p for p in combo.values() if p]
+    if not pecas:
+        return (-99.0, [])
+    topo, base = combo.get("topo"), combo.get("base")
+    score, motivos = 0.0, []
+
+    # 1) Harmonia de paleta — quanto mais peças dentro da paleta, melhor.
+    dentro = sum(1 for p in pecas if _harmonico(p))
+    score += 1.5 * dentro / len(pecas)
+
+    # 2) Coluna monocromática (topo + base mesma família) — regra de ouro.
+    if topo and base and _fam(topo) == _fam(base):
+        score += 1.4
+        motivos.append("Coluna monocromática — cima e baixo no mesmo tom alongam a silhueta.")
+    elif topo and base and _harmonico(topo) and _harmonico(base):
+        score += 0.7
+        motivos.append("Base neutra quente que já se combina sozinha.")
+
+    # 3) Preto perto do rosto encurta/apaga; como base ou camada, tudo bem.
+    if topo and topo.get("cor") == "Preto":
+        score -= 0.8
+    elif topo and not _harmonico(topo):
+        score -= 0.25            # cor fria fora da paleta junto ao rosto
+
+    # 4) Um ponto de brilho dourado — só um.
+    acab = combo.get("acab")
+    if acab and acab.get("cor") in ("Dourado", "Caramelo"):
+        score += 0.5
+        motivos.append("Um ponto de brilho dourado para fechar o look.")
+
+    # 5) Estrutura em cima equilibra o quadril.
+    if combo.get("camada"):
+        score += 0.25
+
+    # 6) Coerência de ocasião (e alvo, se houver).
+    occs = [p.get("ocasiao") for p in pecas
+            if p.get("ocasiao") and p.get("ocasiao") != "Todas"]
+    if alvo and alvo != "Todas" and any(o == alvo for o in occs):
+        score += 0.9
+    if occs:
+        dom = max(set(occs), key=occs.count)
+        score += 0.5 * occs.count(dom) / len(occs)
+
+    # 7) Look completo (topo+base+calçado) vale mais que fragmento.
+    if combo.get("topo") and combo.get("base") and combo.get("calcado"):
+        score += 0.6
+
+    return (score, motivos)
+
+
+def _melhor_extra(combo: dict, candidatos: list, alvo, sempre: bool):
+    """Escolhe a peça extra (camada/acabamento) que mais eleva o score.
+    Só inclui se ajudar (`sempre=False`) ou se houver candidato (`sempre=True`)."""
+    base_score, _ = _avaliar(combo, alvo)
+    melhor, melhor_s = None, base_score
+    for c in candidatos:
+        s, _ = _avaliar({**combo, "_x": c}, alvo)
+        if s > melhor_s + 1e-9:
+            melhor, melhor_s = c, s
+    if melhor is None and sempre and candidatos:
+        melhor = max(candidatos,
+                     key=lambda c: _avaliar({**combo, "_x": c}, alvo)[0])
+    return melhor
+
+
+def _nomear(combo: dict) -> str:
+    cores = []
+    for slot in ("topo", "base", "camada"):
+        p = combo.get(slot)
+        if p and p.get("cor") and p["cor"] not in cores:
+            cores.append(p["cor"])
+    if not cores:
+        return "Look do acervo"
+    topo, base = combo.get("topo"), combo.get("base")
+    if topo and base and _fam(topo) == _fam(base):
+        return f"Coluna {cores[0]}"
+    return " & ".join(cores[:2])
+
+
+def montar_looks(n: int = 6, ocasiao: str = None) -> list:
+    """Gera looks combinando as peças do guarda-roupa da usuária.
+
+    Retorna uma lista de dicts no mesmo formato de `looks`, com extras
+    `auto=True`, `motivos=[...]` e `score` para a tela de sugestões.
+    """
+    gr = st.session_state.guarda_roupa
+    porslot = {s: [p for p in gr if p["categoria"] in cats]
+               for s, cats in _SLOTS.items()}
+
+    topos = porslot["topo"] or [None]
+    bases = porslot["base"] or [None]
+    calcs = porslot["calcado"] or [None]
+
+    gerados, vistos = [], set()
+    for topo in topos:
+        for base in bases:
+            if not (topo or base):
+                continue
+            for calc in calcs:
+                combo = {"topo": topo, "base": base, "calcado": calc}
+                cam = _melhor_extra(combo, porslot["camada"], ocasiao, sempre=False)
+                if cam:
+                    combo["camada"] = cam
+                ac = _melhor_extra(combo, porslot["acab"], ocasiao, sempre=True)
+                if ac:
+                    combo["acab"] = ac
+
+                pecas = [combo[s] for s in ("topo", "camada", "base", "calcado", "acab")
+                         if combo.get(s)]
+                chave = frozenset(p["nome"] for p in pecas)
+                if len(chave) < 2 or chave in vistos:
+                    continue
+                vistos.add(chave)
+
+                score, motivos = _avaliar(combo, ocasiao)
+                occs = [p.get("ocasiao") for p in pecas
+                        if p.get("ocasiao") and p.get("ocasiao") != "Todas"]
+                occ = max(set(occs), key=occs.count) if occs else "Versátil"
+                gerados.append({
+                    "id": None,
+                    "nome": _nomear(combo),
+                    "ocasiao": occ,
+                    "nivel": "Montado pelo seu acervo",
+                    "descricao": " · ".join(p["nome"] for p in pecas),
+                    "pecas": [p["nome"] for p in pecas],
+                    "auto": True,
+                    "score": round(score, 2),
+                    "motivos": motivos or ["Peças da sua paleta que conversam entre si."],
+                })
+
+    gerados.sort(key=lambda l: l["score"], reverse=True)
+    return gerados[:n]
+
+
+def salvar_look(look: dict) -> dict:
+    """Grava um look gerado em `looks` (com id novo) e persiste."""
+    ids = [l["id"] for l in st.session_state.looks if isinstance(l.get("id"), int)]
+    novo_id = (max(ids) + 1) if ids else 1
+    limpo = {
+        "id": novo_id,
+        "nome": look["nome"],
+        "ocasiao": look.get("ocasiao", "Versátil"),
+        "nivel": look.get("nivel", "Montado pelo seu acervo"),
+        "descricao": look.get("descricao", ""),
+        "pecas": list(look.get("pecas", [])),
+    }
+    st.session_state.looks.append(limpo)
+    persist()
+    return limpo
