@@ -62,14 +62,21 @@ def render():
             oca = e.selectbox("Ocasião", OCASIOES + ["Todas"])
             ess = f.checkbox("Essencial da cápsula")
             foto = st.file_uploader("Foto da peça (opcional)", type=["png", "jpg", "jpeg", "webp"])
+            recorte = st.checkbox("Recortar o fundo (deixar a peça sem fundo)", value=True,
+                                  key="rec_add")
             if st.form_submit_button("Adicionar à coleção"):
                 if nome.strip():
                     nid = max([p["id"] for p in st.session_state.guarda_roupa], default=0) + 1
+                    if foto:
+                        with st.spinner("Preparando a foto…"):
+                            uri = store.encode_image(foto, cutout=recorte)
+                    else:
+                        uri = ""
                     st.session_state.guarda_roupa.append({
                         "id": nid, "categoria": cat, "marca": marca.strip() or "—",
                         "nome": nome.strip(), "cor": cor.strip() or "—", "tone": "#3a3c40",
                         "ocasiao": oca, "essencial": ess,
-                        "foto": store.encode_image(foto) if foto else "",
+                        "foto": uri,
                     })
                     D.persist()
                     st.rerun()
@@ -79,6 +86,8 @@ def render():
         st.markdown('<div class="sec-sub" style="margin-bottom:14px;">'
                     'Envie a foto real de cada peça — ela substitui o quadradinho na grade.</div>',
                     unsafe_allow_html=True)
+        rec_manage = st.checkbox("Recortar o fundo das fotos enviadas aqui", value=True,
+                                 key="rec_manage")
         for peca in st.session_state.guarda_roupa:
             cols = st.columns([2.4, 2.2, 1], gap="small")
             tem = "✓ com foto" if peca.get("foto") else "sem foto"
@@ -91,7 +100,8 @@ def render():
             up = cols[1].file_uploader("foto", type=["png", "jpg", "jpeg", "webp"],
                                        key=f"up_{peca['id']}", label_visibility="collapsed")
             if up is not None:
-                peca["foto"] = store.encode_image(up)
+                with st.spinner("Preparando a foto…"):
+                    peca["foto"] = store.encode_image(up, cutout=rec_manage)
                 D.persist()
                 st.rerun()
             if cols[2].button("Remover", key=f"del_{peca['id']}", type="secondary", use_container_width=True):

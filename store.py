@@ -128,10 +128,60 @@ def _save_file(data: dict) -> None:
         pass
 
 
+# ── Recorte de fundo (opcional, com fallback) ────────────────────
+_REMBG_SESSION = None
+_REMBG_FAILED = False
+
+
+def cutout_disponivel() -> bool:
+    """O recorte de fundo conseguiu carregar nesta sessão?"""
+    return not _REMBG_FAILED
+
+
+def _cutout(raw_bytes: bytes, max_size=(560, 780)):
+    """Remove o fundo da imagem e devolve um PNG (com transparência) em bytes.
+
+    Usa o modelo leve `u2netp`. Se a biblioteca ou o modelo não estiverem
+    disponíveis (ex.: sem internet no primeiro uso), devolve None — o
+    chamador cai no caminho normal e o app nunca quebra.
+    """
+    global _REMBG_SESSION, _REMBG_FAILED
+    if _REMBG_FAILED:
+        return None
+    try:
+        from PIL import Image
+        from rembg import remove, new_session
+        if _REMBG_SESSION is None:
+            _REMBG_SESSION = new_session("u2netp")      # ~4MB, leve p/ deploy
+        img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        img.thumbnail(max_size)
+        out = remove(img, session=_REMBG_SESSION)
+        if out.mode != "RGBA":
+            out = out.convert("RGBA")
+        bbox = out.getbbox()                            # apara o vazio ao redor
+        if bbox:
+            out = out.crop(bbox)
+        buf = io.BytesIO()
+        out.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        _REMBG_FAILED = True        # não insiste no resto da sessão
+        return None
+
+
 # ── Imagem → data URI (redimensionada) ───────────────────────────
-def encode_image(uploaded_file, max_size=(560, 780)) -> str:
+def encode_image(uploaded_file, max_size=(560, 780), cutout=False) -> str:
     raw = uploaded_file.read()
     mime = getattr(uploaded_file, "type", None) or "image/jpeg"
+
+    # Recorte de fundo (peça "flutuando"). PNG preserva a transparência.
+    if cutout:
+        cut = _cutout(raw, max_size)
+        if cut:
+            b64 = base64.b64encode(cut).decode("ascii")
+            return f"data:image/png;base64,{b64}"
+        # senão, segue para o caminho normal abaixo
+
     try:
         from PIL import Image
         img = Image.open(io.BytesIO(raw)).convert("RGB")

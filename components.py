@@ -56,8 +56,15 @@ def tile(tone: str, mono: str = "", badge: str = "", ratio: str = "3 / 4",
     """
     badge_html = f'<div class="tile-badge">{badge}</div>' if badge else ""
     if photo:
-        return (f'<div class="tile" style="aspect-ratio:{ratio};'
-                f'background-image:url({photo});background-size:cover;background-position:center;">'
+        # Peça recortada (PNG com transparência) → mostra "flutuando" inteira
+        # sobre um fundo suave; foto normal (JPEG) → preenche o tile.
+        recortada = photo.startswith("data:image/png")
+        size = "contain" if recortada else "cover"
+        fundo = "background-color:var(--panel);" if recortada else ""
+        pad = "padding:10px;" if recortada else ""
+        return (f'<div class="tile" style="aspect-ratio:{ratio};{fundo}{pad}'
+                f'background-image:url({photo});background-size:{size};'
+                f'background-position:center;background-repeat:no-repeat;">'
                 f'{badge_html}</div>')
     grad = f"linear-gradient(150deg, {tone} 0%, {_darken(tone, .18)} 100%)"
     mono_html = f'<div class="tile-mono">{mono}</div>' if mono else ""

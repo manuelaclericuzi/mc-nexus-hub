@@ -1,3 +1,9 @@
 streamlit>=1.32.0
 Pillow>=10.0.0
 supabase>=2.0.0
+
+# Recorte de fundo das fotos (peça "sem fundo" no closet).
+# rembg puxa o onnxruntime; usamos o modelo leve u2netp no código.
+# Se falhar no deploy, o app cai no fallback (foto normal) sem quebrar.
+rembg>=2.0.0
+onnxruntime>=1.16.0
